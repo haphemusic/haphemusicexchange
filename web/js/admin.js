@@ -49,10 +49,70 @@ async function loadStats() {
     const { count: users } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
     const { count: works } = await supabase.from('works').select('*', { count: 'exact', head: true });
     
-    // Simulating active users for now as Supabase doesn't track last_seen easily without custom logic
+    // Calcular usuarios activos reales (perfiles actualizados en las últimas 24h)
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    const { count: active } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gt('updated_at', oneDayAgo.toISOString());
+    
     document.getElementById('admin-stat-users').textContent = users || 0;
-    document.getElementById('admin-stat-active').textContent = Math.floor((users || 0) * 0.15); // 15% active
+    document.getElementById('admin-stat-active').textContent = active || 0;
     document.getElementById('admin-stat-works').textContent = works || 0;
+
+    await drawRegistrationChart();
+}
+
+async function drawRegistrationChart() {
+    const { data: users } = await supabase
+        .from('profiles')
+        .select('created_at')
+        .order('created_at', { ascending: true });
+        
+    const chartContainer = document.getElementById('registration-velocity-chart');
+    if (!chartContainer) return;
+    
+    if (!users || !users.length) {
+        chartContainer.innerHTML = `<p class="text-xs text-slate-500 w-full text-center py-10">No registration data available yet</p>`;
+        return;
+    }
+    
+    const registrationsByDay = {};
+    const today = new Date();
+    
+    // Inicializar los últimos 7 días
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        registrationsByDay[dateStr] = { count: 0, label: d.toLocaleDateString(undefined, { weekday: 'short' }) };
+    }
+    
+    // Contar registros por día
+    users.forEach(u => {
+        if (!u.created_at) return;
+        const dateStr = u.created_at.split('T')[0];
+        if (registrationsByDay[dateStr]) {
+            registrationsByDay[dateStr].count++;
+        }
+    });
+    
+    const daysData = Object.values(registrationsByDay);
+    const maxCount = Math.max(...daysData.map(d => d.count), 1);
+    
+    chartContainer.innerHTML = daysData.map(d => {
+        const pct = (d.count / maxCount) * 100;
+        const heightVal = d.count > 0 ? Math.max(pct, 10) : 0;
+        return `
+            <div class="flex flex-col items-center gap-2 group flex-1">
+                <div class="relative w-8 bg-salmon/20 group-hover:bg-salmon/40 rounded-t-lg transition-all duration-300 flex items-end justify-center" style="height: ${heightVal}%">
+                    <span class="absolute -top-6 text-[10px] text-salmon font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">${d.count} u.</span>
+                </div>
+                <span class="text-[10px] text-slate-500 uppercase font-semibold">${d.label}</span>
+            </div>
+        `;
+    }).join('');
 }
 
 async function loadUsers() {
@@ -61,39 +121,43 @@ async function loadUsers() {
     
     if (!users) return;
 
-    container.innerHTML = users.map(u => `
-        <tr class="hover:bg-white/2 transition-colors">
-            <td class="px-8 py-4">
-                <div class="flex items-center gap-3">
-                    <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name='+u.first_name}" class="w-8 h-8 rounded-full">
-                    <div>
-                        <p class="text-sm font-bold text-white">${u.first_name} ${u.last_name}</p>
-                        <p class="text-[10px] text-slate-500">${u.id.substring(0,8)}</p>
+    container.innerHTML = users.map(u => {
+        const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.name || 'Anonymous User';
+        const avatar = u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=E57373&color=fff`;
+        return `
+            <tr class="hover:bg-white/2 transition-colors">
+                <td class="px-8 py-4">
+                    <div class="flex items-center gap-3">
+                        <img src="${avatar}" class="w-8 h-8 rounded-full object-cover">
+                        <div>
+                            <p class="text-sm font-bold text-white">${fullName}</p>
+                            <p class="text-[10px] text-slate-500">${u.id.substring(0,8)}</p>
+                        </div>
                     </div>
-                </div>
-            </td>
-            <td class="px-8 py-4">
-                <span class="badge bg-slate-800 text-slate-400">${u.role}</span>
-            </td>
-            <td class="px-8 py-4 text-xs text-slate-400">${new Date(u.created_at).toLocaleDateString()}</td>
-            <td class="px-8 py-4">
-                <span class="badge status-${u.status || 'active'}">${u.status || 'active'}</span>
-            </td>
-            <td class="px-8 py-4 text-right">
-                <div class="flex justify-end gap-2">
-                    <button onclick="moderateUser('${u.id}', 'active')" title="Activate" class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-[18px]">check_circle</span>
-                    </button>
-                    <button onclick="moderateUser('${u.id}', 'suspended')" title="Suspend" class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-[18px]">pause_circle</span>
-                    </button>
-                    <button onclick="moderateUser('${u.id}', 'banned')" title="Ban" class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-[18px]">block</span>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+                </td>
+                <td class="px-8 py-4">
+                    <span class="badge bg-slate-800 text-slate-400">${u.role}</span>
+                </td>
+                <td class="px-8 py-4 text-xs text-slate-400">${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</td>
+                <td class="px-8 py-4">
+                    <span class="badge status-${u.status || 'active'}">${u.status || 'active'}</span>
+                </td>
+                <td class="px-8 py-4 text-right">
+                    <div class="flex justify-end gap-2">
+                        <button onclick="moderateUser('${u.id}', 'active')" title="Activate" class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all">
+                            <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        </button>
+                        <button onclick="moderateUser('${u.id}', 'suspended')" title="Suspend" class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white transition-all">
+                            <span class="material-symbols-outlined text-[18px]">pause_circle</span>
+                        </button>
+                        <button onclick="moderateUser('${u.id}', 'banned')" title="Ban" class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
+                            <span class="material-symbols-outlined text-[18px]">block</span>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 window.moderateUser = async (userId, newStatus) => {
@@ -104,8 +168,15 @@ window.moderateUser = async (userId, newStatus) => {
         .update({ status: newStatus })
         .eq('id', userId);
 
-    if (error) alert("Error: " + error.message);
-    else await loadUsers();
+    if (error) {
+        if (error.message.includes('column "status" does not exist') || error.code === '42703') {
+            alert("⚠️ La columna 'status' no existe en tu tabla 'profiles' en Supabase.\n\nPor favor, ejecuta la siguiente consulta SQL en tu consola de Supabase (SQL Editor) para habilitar la moderación:\n\nALTER TABLE profiles ADD COLUMN status text DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'banned'));");
+        } else {
+            alert("Error: " + error.message);
+        }
+    } else {
+        await loadUsers();
+    }
 };
 
 async function loadInstruments() {
@@ -116,11 +187,14 @@ async function loadInstruments() {
 
     container.innerHTML = instruments.map(i => `
         <div class="glass-panel p-6 rounded-3xl space-y-2 border-white/5 hover:border-salmon/30 transition-all">
-            <div class="flex justify-between items-start">
-                <p class="font-bold text-white">${i.name}</p>
-                <span class="material-symbols-outlined text-slate-600">music_note</span>
+            <div class="flex justify-between items-start gap-3">
+                <p class="font-bold text-white leading-tight">${i.variant || i.name}</p>
+                <span class="material-symbols-outlined text-slate-600 flex-shrink-0">music_note</span>
             </div>
-            <p class="text-[10px] text-salmon uppercase font-black tracking-widest">${i.family}</p>
+            <div class="flex justify-between items-center text-[9px] font-black tracking-widest uppercase">
+                <p class="text-salmon">${i.family}</p>
+                <p class="text-slate-500">${i.name}</p>
+            </div>
         </div>
     `).join('');
 }
@@ -146,9 +220,13 @@ window.saveInstrument = async () => {
     const family = familySelect === 'NEW' ? familyNew : familySelect;
     const category = categorySelect === 'NEW' ? categoryNew : categorySelect;
 
-    if (!name || !family) return alert("Name and Family are required");
+    if (!name || !family || !category) return alert("Instrument Name, Family and Category are required");
 
-    const { error } = await supabase.from('instruments').insert({ name, family }); // Assuming schema only has name/family for now
+    const { error } = await supabase.from('instruments').insert({ 
+        name: category, 
+        family, 
+        variant: name 
+    });
 
     if (error) alert(error.message);
     else {
