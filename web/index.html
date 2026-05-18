@@ -141,45 +141,43 @@
             <div class="space-y-2 col-span-1 md:col-span-2">
                 <label class="font-label-sm text-xs text-tertiary-container uppercase font-semibold">Instrumentation (Select Hierarchy)</label>
                 <div class="cascade-wrapper">
-                    <button id="instrument-btn" onclick="toggleMainList()" class="w-full bg-surface-container-low border border-white/10 rounded-xl px-4 py-3 text-white flex justify-between items-center focus:border-salmon transition-all">
+                    <button id="instrument-btn" onclick="toggleMainList()" class="w-full h-[50px] bg-surface-container-low border border-white/10 rounded-xl px-4 text-white flex justify-between items-center focus:border-salmon transition-all">
                         <span id="selected-instrument-text">Browse Instruments...</span>
                         <span class="material-symbols-outlined text-slate-500">list</span>
                     </button>
                     <div id="main-list" class="cascade-menu" style="z-index: 9999;"></div>
                 </div>
-
-                <div class="flex flex-wrap gap-2 mt-2" id="tags-container"></div>
             </div>
 
             <div class="space-y-2">
                 <label class="font-label-sm text-xs text-tertiary-container uppercase font-semibold">Year Composition</label>
                 <div class="flex gap-2">
-                    <input id="year-from" class="w-full bg-surface-container-low border border-white/10 rounded-xl px-2 py-3 text-white focus:outline-none focus:border-salmon transition-colors" placeholder="From" type="number" value="2019" onchange="filterWorks()"/>
-                    <input id="year-to" class="w-full bg-surface-container-low border border-white/10 rounded-xl px-2 py-3 text-white focus:outline-none focus:border-salmon transition-colors" placeholder="To" type="number" value="2026" onchange="filterWorks()"/>
+                    <input id="year-from" class="w-full h-[50px] bg-surface-container-low border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors" placeholder="From" type="number" value="2019" onchange="filterWorks()"/>
+                    <input id="year-to" class="w-full h-[50px] bg-surface-container-low border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors" placeholder="To" type="number" value="2026" onchange="filterWorks()"/>
                 </div>
             </div>
 
             <div class="space-y-2">
                 <label class="font-label-sm text-xs text-tertiary-container uppercase font-semibold">Country</label>
                 <div class="relative">
-                    <select id="country-select" class="w-full bg-surface-container-low border border-white/10 rounded-xl px-4 py-3 text-white appearance-none focus:outline-none focus:border-salmon transition-colors" onchange="filterWorks()">
+                    <select id="country-select" class="w-full h-[50px] bg-surface-container-low border border-white/10 rounded-xl px-4 text-white appearance-none focus:outline-none focus:border-salmon transition-colors" onchange="filterWorks()">
                         <option value="">All Countries</option>
                     </select>
-                    <span class="material-symbols-outlined absolute right-3 top-3.5 text-tertiary-container pointer-events-none">public</span>
+                    <span class="material-symbols-outlined absolute right-3 top-[13px] text-tertiary-container pointer-events-none">public</span>
                 </div>
             </div>
 
             <div class="space-y-2">
                 <label class="font-label-sm text-xs text-tertiary-container uppercase font-semibold">Gender</label>
                 <div class="relative">
-                    <select id="gender-select" class="w-full bg-surface-container-low border border-white/10 rounded-xl px-4 py-3 text-white appearance-none focus:outline-none focus:border-salmon transition-colors" onchange="filterWorks()">
+                    <select id="gender-select" class="w-full h-[50px] bg-surface-container-low border border-white/10 rounded-xl px-4 text-white appearance-none focus:outline-none focus:border-salmon transition-colors" onchange="filterWorks()">
                         <option value="">All</option>
                         <option value="Female">Female</option>
                         <option value="Male">Male</option>
                         <option value="Other">Other</option>
                         <option value="Prefer not to say">Prefer not to say</option>
                     </select>
-                    <span class="material-symbols-outlined absolute right-3 top-3.5 text-tertiary-container pointer-events-none">wc</span>
+                    <span class="material-symbols-outlined absolute right-3 top-[13px] text-tertiary-container pointer-events-none">wc</span>
                 </div>
             </div>
 
@@ -188,6 +186,10 @@
                 Explore
             </button>
         </div>
+        
+        <!-- Tags Container below the grid -->
+        <div class="flex flex-wrap gap-2 mt-4 relative z-10" id="tags-container"></div>
+
         <div class="absolute -top-24 -right-24 w-64 h-64 bg-salmon/10 blur-[100px] rounded-full pointer-events-none z-0"></div>
     </section>
 
