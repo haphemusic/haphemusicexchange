@@ -124,13 +124,33 @@ async function loadUsers() {
     container.innerHTML = users.map(u => {
         const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.name || 'Anonymous User';
         const avatar = u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=E57373&color=fff`;
+        
+        // Determinar si está en línea (actividad en los últimos 5 minutos)
+        const lastActive = u.updated_at ? new Date(u.updated_at) : null;
+        const isOnline = lastActive && (new Date() - lastActive) < 5 * 60 * 1000;
+        
+        const statusBadge = isOnline 
+            ? `<div class="relative w-8 h-8">
+                 <img src="${avatar}" class="w-8 h-8 rounded-full object-cover">
+                 <span class="absolute bottom-0 right-0 flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900">
+                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                 </span>
+               </div>`
+            : `<div class="relative w-8 h-8">
+                 <img src="${avatar}" class="w-8 h-8 rounded-full object-cover opacity-60">
+                 <span class="absolute bottom-0 right-0 flex h-2.5 w-2.5 rounded-full bg-slate-500 ring-2 ring-slate-900"></span>
+               </div>`;
+               
         return `
             <tr class="hover:bg-white/2 transition-colors">
                 <td class="px-8 py-4">
                     <div class="flex items-center gap-3">
-                        <img src="${avatar}" class="w-8 h-8 rounded-full object-cover">
+                        ${statusBadge}
                         <div>
-                            <p class="text-sm font-bold text-white">${fullName}</p>
+                            <p class="text-sm font-bold text-white flex items-center gap-2">
+                                ${fullName}
+                                ${isOnline ? '<span class="text-[9px] bg-emerald-500/10 text-emerald-400 font-bold px-1.5 py-0.5 rounded uppercase tracking-wider scale-90">Online</span>' : ''}
+                            </p>
                             <p class="text-[10px] text-slate-500">${u.id.substring(0,8)}</p>
                         </div>
                     </div>
