@@ -200,13 +200,13 @@
                 <h2 class="font-headline-lg text-3xl font-medium text-white">Recent Works</h2>
                 <p class="text-tertiary-container">New additions to the digital catalog</p>
             </div>
-            <a class="text-salmon text-xs font-semibold hover:underline tracking-widest flex items-center gap-1" href="#">VIEW ALL <span class="material-symbols-outlined text-[14px]">arrow_forward</span></a>
+            <a class="text-salmon text-xs font-semibold hover:underline tracking-widest flex items-center gap-1" href="#" onclick="return window.viewAllWorks()">VIEW ALL <span class="material-symbols-outlined text-[14px]">arrow_forward</span></a>
         </div>
         <div id="works-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div id="no-results" class="hidden text-center py-20 bg-white/5 rounded-3xl border border-white/10">
             <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">music_off</span>
-            <h3 class="text-xl text-white font-medium">No results found for this search</h3>
-            <p class="text-slate-400">Try adjusting your filters or selecting different instruments.</p>
+            <h3 class="text-xl text-white font-medium">No works found in the archive</h3>
+            <p id="no-results-text" class="text-slate-400">Try adjusting your filters or check that the Supabase `works` table has records.</p>
         </div>
     </section>
 </main>
@@ -229,6 +229,9 @@
     const countries = ["Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Korea, North", "Korea, South", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"];
 
     let instrumentData = {};
+    let instrumentTagMap = {};
+    let allWorks = [];
+    let workInstrumentsMap = {};
 
     async function loadInstruments() {
         const { data } = await supabase.from('instruments').select('*');
@@ -237,9 +240,51 @@
                 if (!instrumentData[item.family]) instrumentData[item.family] = {};
                 if (!instrumentData[item.family][item.name]) instrumentData[item.family][item.name] = [];
                 if (item.variant) instrumentData[item.family][item.name].push(item.variant);
+
+                const tagName = item.variant
+                    ? (item.variant.toLowerCase().includes(item.name.toLowerCase()) ? item.variant : `${item.name} (${item.variant})`)
+                    : item.name;
+
+                if (!instrumentTagMap[tagName]) instrumentTagMap[tagName] = [];
+                instrumentTagMap[tagName].push(item.id);
             });
             renderMenu();
         }
+    }
+
+    async function loadWorkInstruments() {
+        const { data, error } = await supabase
+            .from('work_instruments')
+            .select('work_id, instrument_id(name, family, variant)');
+
+        if (error) {
+            console.error('Failed to load work instruments:', error);
+            return;
+        }
+
+        workInstrumentsMap = {};
+        (data || []).forEach(item => {
+            if (!workInstrumentsMap[item.work_id]) workInstrumentsMap[item.work_id] = [];
+            workInstrumentsMap[item.work_id].push(item.instrument_id);
+        });
+    }
+
+    async function loadWorks() {
+        const { data, error } = await supabase
+            .from('works')
+            .select('*, composer:composer_id(first_name, last_name, residence_country, gender)');
+
+        if (error) {
+            console.error('Failed to load works:', error);
+            return;
+        }
+
+        allWorks = data || [];
+    }
+
+    async function loadData() {
+        await Promise.all([loadInstruments(), loadWorkInstruments(), loadWorks()]);
+        filterWorks();
     }
 
     function renderMenu() {
@@ -272,10 +317,10 @@
 
     window.addTag = (name) => {
         const container = document.getElementById('tags-container');
-        if ([...container.children].some(c => c.textContent.includes(name))) return;
-        container.insertAdjacentHTML('beforeend', `<div class="tag-item bg-salmon/20 text-salmon px-3 py-1 rounded-full text-[11px] flex items-center gap-2">${name} <span class="cursor-pointer" onclick="this.parentElement.remove(); window.filterWorks();">×</span></div>`);
+        if ([...container.children].some(c => c.dataset.tag === name)) return;
+        container.insertAdjacentHTML('beforeend', `<div class="tag-item bg-salmon/20 text-salmon px-3 py-1 rounded-full text-[11px] flex items-center gap-2" data-tag="${name}">${name} <span class="cursor-pointer" onclick="this.parentElement.remove(); window.filterWorks();">×</span></div>`);
         document.getElementById('main-list').style.display = 'none';
-        window.filterWorks();
+        filterWorks();
     };
 
     window.toggleMainList = () => {
@@ -283,29 +328,71 @@
         m.style.display = m.style.display === 'block' ? 'none' : 'block';
     };
 
-    window.filterWorks = async () => {
-        const yf = document.getElementById('year-from').value;
-        const yt = document.getElementById('year-to').value;
+    window.viewAllWorks = () => {
+        filterWorks();
+        return false;
+    };
+
+    window.filterWorks = () => {
+        const yf = parseInt(document.getElementById('year-from').value, 10) || 0;
+        const yt = parseInt(document.getElementById('year-to').value, 10) || 9999;
         const co = document.getElementById('country-select').value;
-        const ge = document.getElementById('gender-select').value;
+        const ge = document.getElementById('gender-select').value.toLowerCase();
+        const selectedTags = [...document.querySelectorAll('#tags-container .tag-item')].map(tag => tag.dataset.tag.toLowerCase());
 
-        let query = supabase.from('works').select('*, profiles:composer_id(*)').gte('year', yf).lte('year', yt);
-        if(co) query = query.filter('profiles.residence_country', 'eq', co);
-        if(ge) query = query.filter('profiles.gender', 'eq', ge.toLowerCase());
+        const results = allWorks.filter(w => {
+            const year = Number(w.year) || 0;
+            if (year < yf || year > yt) return false;
+            if (co && w.composer?.residence_country !== co) return false;
+            if (ge && ge !== '' && w.composer?.gender !== ge) return false;
 
-        const { data } = await query;
-        renderResults(data || []);
+            if (selectedTags.length) {
+                const instruments = (workInstrumentsMap[w.id] || [])
+                    .map(item => {
+                        const name = item?.name || '';
+                        const variant = item?.variant || '';
+                        return variant ? `${name} (${variant})`.toLowerCase() : name.toLowerCase();
+                    });
+
+                return selectedTags.every(tag => instruments.some(inst => inst.includes(tag) || tag.includes(inst)));
+            }
+
+            return true;
+        });
+
+        renderResults(results);
     };
 
     function renderResults(works) {
         const grid = document.getElementById('works-grid');
+        const noResults = document.getElementById('no-results');
+        const noResultsText = document.getElementById('no-results-text');
+
+        if (!works || works.length === 0) {
+            grid.innerHTML = '';
+            if (allWorks.length === 0) {
+                noResultsText.textContent = 'No works exist in the configured Supabase project yet. Add records to the `works` table or check your Supabase URL/API key.';
+            } else {
+                noResultsText.textContent = 'Try adjusting your filters or selecting different instruments.';
+            }
+            noResults.classList.remove('hidden');
+            return;
+        }
+
+        noResults.classList.add('hidden');
         grid.innerHTML = works.map(w => {
-            const composerName = w.profiles ? `${w.profiles.first_name || ''} ${w.profiles.last_name || ''}`.trim() : 'Unknown Composer';
-            const residenceCountry = w.profiles?.residence_country || 'Unknown Country';
+            const composerName = w.composer ? `${w.composer.first_name || ''} ${w.composer.last_name || ''}`.trim() : 'Unknown Composer';
+            const residenceCountry = w.composer?.residence_country || 'Unknown Country';
+            const instruments = (workInstrumentsMap[w.id] || [])
+                .map(item => item.variant || item.name)
+                .filter(Boolean)
+                .join(', ');
+
             return `
                 <div class="glass-panel p-4 rounded-2xl">
                     <h3 class="text-white font-medium">${w.title}</h3>
                     <p class="text-slate-400 text-sm">${composerName}</p>
+                    <p class="text-[12px] text-slate-400 mb-3">${instruments || 'Instruments not specified'}</p>
                     <p class="text-xs text-salmon">${residenceCountry} | ${w.year}</p>
                 </div>
             `;
@@ -315,8 +402,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const sel = document.getElementById('country-select');
         countries.forEach(c => sel.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`));
-        loadInstruments();
-        filterWorks();
+        loadData();
     });
 </script>
 </body>
