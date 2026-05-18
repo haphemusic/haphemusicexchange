@@ -33,6 +33,7 @@ CREATE TABLE profiles (
   
   avatar_url text,
   is_complete boolean DEFAULT false, -- Flag para acceso total
+  status text DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'banned')),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
