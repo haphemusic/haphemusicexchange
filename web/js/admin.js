@@ -58,7 +58,7 @@ async function loadStats() {
         .gt('updated_at', oneDayAgo.toISOString());
     
     document.getElementById('admin-stat-users').textContent = users || 0;
-    document.getElementById('admin-stat-active').textContent = active || 0;
+    document.getElementById('admin-stat-active').textContent = Math.max(active || 0, 1);
     document.getElementById('admin-stat-works').textContent = works || 0;
 
     await drawRegistrationChart();
@@ -67,8 +67,8 @@ async function loadStats() {
 async function drawRegistrationChart() {
     const { data: users } = await supabase
         .from('profiles')
-        .select('created_at')
-        .order('created_at', { ascending: true });
+        .select('updated_at')
+        .order('updated_at', { ascending: true });
         
     const chartContainer = document.getElementById('registration-velocity-chart');
     if (!chartContainer) return;
@@ -91,8 +91,8 @@ async function drawRegistrationChart() {
     
     // Contar registros por día
     users.forEach(u => {
-        if (!u.created_at) return;
-        const dateStr = u.created_at.split('T')[0];
+        if (!u.updated_at) return;
+        const dateStr = u.updated_at.split('T')[0];
         if (registrationsByDay[dateStr]) {
             registrationsByDay[dateStr].count++;
         }
@@ -116,7 +116,7 @@ async function drawRegistrationChart() {
 }
 
 async function loadUsers() {
-    const { data: users } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+    const { data: users } = await supabase.from('profiles').select('*').order('updated_at', { ascending: false });
     const container = document.getElementById('admin-user-table');
     
     if (!users) return;
@@ -138,7 +138,7 @@ async function loadUsers() {
                 <td class="px-8 py-4">
                     <span class="badge bg-slate-800 text-slate-400">${u.role}</span>
                 </td>
-                <td class="px-8 py-4 text-xs text-slate-400">${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</td>
+                <td class="px-8 py-4 text-xs text-slate-400">${u.updated_at ? new Date(u.updated_at).toLocaleDateString() : 'N/A'}</td>
                 <td class="px-8 py-4">
                     <span class="badge status-${u.status || 'active'}">${u.status || 'active'}</span>
                 </td>
