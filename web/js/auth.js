@@ -50,6 +50,14 @@ async function checkAuth() {
         const isComplete = profile.is_complete;
         console.log("👤 User role:", role, "| Complete:", isComplete);
 
+        // Actualizar el timestamp de última actividad de manera asíncrona (Online indicator)
+        supabase.from('profiles')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', session.user.id)
+            .then(({ error }) => {
+                if (error) console.warn("Failed to update last active:", error);
+            });
+
         // Protección de rutas: Redirigir si el usuario intenta entrar en un dashboard que no le toca
         const path = window.location.pathname;
         if (path.includes('admin.html') && role !== 'admin') window.location.href = 'index.html';
