@@ -130,13 +130,21 @@ window.toggleNewFamilyInput = (val) => {
     input.classList.toggle('hidden', val !== 'NEW');
 };
 
+window.toggleNewCategoryInput = (val) => {
+    const input = document.getElementById('new-inst-category-input');
+    input.classList.toggle('hidden', val !== 'NEW');
+};
+
 window.saveInstrument = async () => {
     const name = document.getElementById('new-inst-name').value;
     const familySelect = document.getElementById('new-inst-family-select').value;
     const familyNew = document.getElementById('new-inst-family-input').value;
-    const category = document.getElementById('new-inst-category').value;
+    
+    const categorySelect = document.getElementById('new-inst-category-select').value;
+    const categoryNew = document.getElementById('new-inst-category-input').value;
     
     const family = familySelect === 'NEW' ? familyNew : familySelect;
+    const category = categorySelect === 'NEW' ? categoryNew : categorySelect;
 
     if (!name || !family) return alert("Name and Family are required");
 
