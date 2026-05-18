@@ -272,7 +272,7 @@
     async function loadWorks() {
         const { data, error } = await supabase
             .from('works')
-            .select('*, composer:composer_id(first_name, last_name, residence_country, gender)');
+            .select('*, composer:composer_id(name, nationality, period)');
 
         if (error) {
             console.error('Failed to load works:', error);
@@ -284,6 +284,11 @@
 
     async function loadData() {
         await Promise.all([loadInstruments(), loadWorkInstruments(), loadWorks()]);
+        
+        const uniqueNationalities = [...new Set(allWorks.map(w => w.composer?.nationality).filter(Boolean))].sort();
+        const sel = document.getElementById('country-select');
+        sel.innerHTML = '<option value="">All Countries</option>' + uniqueNationalities.map(c => `<option value="${c}">${c}</option>`).join('');
+
         filterWorks();
     }
 
@@ -343,7 +348,7 @@
         const results = allWorks.filter(w => {
             const year = Number(w.year) || 0;
             if (year < yf || year > yt) return false;
-            if (co && w.composer?.residence_country !== co) return false;
+            if (co && w.composer?.nationality !== co) return false;
             if (ge && ge !== '' && w.composer?.gender !== ge) return false;
 
             if (selectedTags.length) {
@@ -381,8 +386,8 @@
 
         noResults.classList.add('hidden');
         grid.innerHTML = works.map(w => {
-            const composerName = w.composer ? `${w.composer.first_name || ''} ${w.composer.last_name || ''}`.trim() : 'Unknown Composer';
-            const residenceCountry = w.composer?.residence_country || 'Unknown Country';
+            const composerName = w.composer?.name || 'Unknown Composer';
+            const residenceCountry = w.composer?.nationality || 'Unknown Country';
             const instruments = (workInstrumentsMap[w.id] || [])
                 .map(item => item.variant || item.name)
                 .filter(Boolean)
@@ -400,8 +405,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const sel = document.getElementById('country-select');
-        countries.forEach(c => sel.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`));
         loadData();
     });
 </script>
