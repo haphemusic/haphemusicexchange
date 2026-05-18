@@ -135,7 +135,7 @@
 
     <!-- Search Section -->
     <section class="glass-panel rounded-3xl p-8 mb-20 relative group">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end relative z-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end relative z-20">
             
             <!-- Instrumentation Selector (Cascading) -->
             <div class="space-y-2 col-span-1 md:col-span-2">
@@ -253,14 +253,17 @@
                             return `
                                 <div class="cascade-item">${n}
                                     <div class="cascade-submenu">
-                                        ${variants.map(v => `
-                                            <div class="cascade-item" onclick="window.addTag(${JSON.stringify(`${n} (${v})`)})">${v}</div>
-                                        `).join('')}
+                                        ${variants.map(v => {
+                                            const displayName = v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`;
+                                            return `
+                                                <div class="cascade-item" onclick='window.addTag(${JSON.stringify(displayName)})'>${v}</div>
+                                            `;
+                                        }).join('')}
                                     </div>
                                 </div>
                             `;
                         }
-                        return `<div class="cascade-item" onclick="window.addTag(${JSON.stringify(n)})">${n}</div>`;
+                        return `<div class="cascade-item" onclick='window.addTag(${JSON.stringify(n)})'>${n}</div>`;
                     }).join('')}
                 </div>
             </div>
@@ -270,10 +273,9 @@
     window.addTag = (name) => {
         const container = document.getElementById('tags-container');
         if ([...container.children].some(c => c.textContent.includes(name))) return;
-        container.insertAdjacentHTML('beforeend', `<div class="tag-item bg-salmon/20 text-salmon px-3 py-1 rounded-full text-[11px] flex items-center gap-2">${name} <span class="cursor-pointer" onclick="this.parentElement.remove(); filterWorks();">×</span></div>`);
-        document.getElementById('selected-instrument-text').textContent = name;
+        container.insertAdjacentHTML('beforeend', `<div class="tag-item bg-salmon/20 text-salmon px-3 py-1 rounded-full text-[11px] flex items-center gap-2">${name} <span class="cursor-pointer" onclick="this.parentElement.remove(); window.filterWorks();">×</span></div>`);
         document.getElementById('main-list').style.display = 'none';
-        filterWorks();
+        window.filterWorks();
     };
 
     window.toggleMainList = () => {
@@ -297,13 +299,17 @@
 
     function renderResults(works) {
         const grid = document.getElementById('works-grid');
-        grid.innerHTML = works.map(w => `
-            <div class="glass-panel p-4 rounded-2xl">
-                <h3 class="text-white font-medium">${w.title}</h3>
-                <p class="text-slate-400 text-sm">${w.profiles.first_name} ${w.profiles.last_name}</p>
-                <p class="text-xs text-salmon">${w.profiles.residence_country} | ${w.year}</p>
-            </div>
-        `).join('');
+        grid.innerHTML = works.map(w => {
+            const composerName = w.profiles ? `${w.profiles.first_name || ''} ${w.profiles.last_name || ''}`.trim() : 'Unknown Composer';
+            const residenceCountry = w.profiles?.residence_country || 'Unknown Country';
+            return `
+                <div class="glass-panel p-4 rounded-2xl">
+                    <h3 class="text-white font-medium">${w.title}</h3>
+                    <p class="text-slate-400 text-sm">${composerName}</p>
+                    <p class="text-xs text-salmon">${residenceCountry} | ${w.year}</p>
+                </div>
+            `;
+        }).join('');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
