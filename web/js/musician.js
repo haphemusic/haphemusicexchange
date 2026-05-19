@@ -192,7 +192,7 @@ window.submitInterpretation = async () => {
             .select('id')
             .ilike('title', searchInput)
             .limit(1);
-            
+
         if (existingWorks && existingWorks.length > 0) {
             workId = existingWorks[0].id;
         } else {
@@ -202,7 +202,7 @@ window.submitInterpretation = async () => {
                 .insert({ title: searchInput, status: 'pending' })
                 .select('id')
                 .single();
-                
+
             if (newWorkError) {
                 alert("Error creating new work. You might not have permission, or check database settings: " + newWorkError.message);
                 return;
@@ -251,7 +251,7 @@ window.submitInterpretation = async () => {
     } else {
         alert("Interpretation submitted! The composer will be notified.");
         closeSubmissionModal();
-        
+
         // Reset form fields
         document.getElementById('selected-work-id').value = '';
         document.getElementById('selected-title').textContent = '---';
@@ -282,7 +282,7 @@ window.processCSV = (event) => {
     Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
-        complete: async function(results) {
+        complete: async function (results) {
             const rows = results.data;
             let successCount = 0;
             let failCount = 0;
@@ -308,7 +308,7 @@ window.processCSV = (event) => {
                         .insert({ title: title, status: 'pending' })
                         .select('id')
                         .single();
-                        
+
                     if (newWorkError || !newWork) {
                         console.error(`Failed to create work ${title}:`, newWorkError);
                         failCount++;
@@ -318,7 +318,7 @@ window.processCSV = (event) => {
                 } else {
                     workId = works[0].id;
                 }
-                
+
                 // Format date if needed, basic check
                 let perfDate = row['Performance Date'] || row['Date'] || row['performance_date'];
                 if (perfDate && perfDate.includes('/')) {
@@ -360,7 +360,7 @@ window.processCSV = (event) => {
             alert(`CSV Import Complete!\nSuccessfully imported: ${successCount}\nFailed: ${failCount} (Usually because the Work Title was not found in the archive).`);
             await loadStats();
             await loadSubmissions();
-            
+
             // Reset input
             event.target.value = '';
         }
@@ -389,12 +389,12 @@ window.closeSubmissionModal = () => document.getElementById('submission-modal').
 
 window.deletePerformance = async (id) => {
     if (!confirm("Are you sure you want to delete this interpretation?")) return;
-    
+
     const { error } = await supabase
         .from('performances')
         .delete()
         .eq('id', id);
-        
+
     if (error) {
         alert("Error deleting interpretation: " + error.message);
     } else {
