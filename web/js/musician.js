@@ -40,9 +40,9 @@ async function loadUserProfile() {
 
 async function loadStats() {
     const { data: submissions } = await supabase
-        .from('works')
+        .from('performances')
         .select('status')
-        .eq('submitted_by', currentUser.id);
+        .eq('performer_id', currentUser.id);
 
     const total = submissions?.length || 0;
     const accepted = submissions?.filter(s => s.status === 'validated').length || 0;
@@ -55,12 +55,15 @@ async function loadStats() {
 
 async function loadSubmissions() {
     const { data: submissions, error } = await supabase
-        .from('works')
+        .from('performances')
         .select(`
             *,
-            composer:composer_id (first_name, last_name)
+            work:work_id (
+                title,
+                composer:composer_id (name)
+            )
         `)
-        .eq('submitted_by', currentUser.id)
+        .eq('performer_id', currentUser.id)
         .order('created_at', { ascending: false });
 
     const tableBody = document.getElementById('recent-table-body');
@@ -75,8 +78,8 @@ async function loadSubmissions() {
     // Render table (Top 5)
     tableBody.innerHTML = submissions.slice(0, 5).map(s => `
         <tr class="hover:bg-white/2 transition-colors">
-            <td class="px-6 py-4 font-bold text-white text-sm">${s.title}</td>
-            <td class="px-6 py-4 text-slate-400 text-sm">${s.composer.first_name} ${s.composer.last_name}</td>
+            <td class="px-6 py-4 font-bold text-white text-sm">${s.work?.title || 'Unknown Work'}</td>
+            <td class="px-6 py-4 text-slate-400 text-sm">${s.work?.composer?.name || 'Unknown'}</td>
             <td class="px-6 py-4">
                 <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
             </td>
@@ -88,14 +91,20 @@ async function loadSubmissions() {
         <div class="glass-panel p-6 rounded-3xl space-y-3">
             <div class="flex justify-between items-start">
                 <div>
-                    <h4 class="font-bold text-white">${s.title}</h4>
-                    <p class="text-xs text-slate-500">Composer: ${s.composer.first_name} ${s.composer.last_name}</p>
+                    <h4 class="font-bold text-white">${s.work?.title || 'Unknown Work'}</h4>
+                    <p class="text-xs text-slate-500">Composer: ${s.work?.composer?.name || 'Unknown'}</p>
                 </div>
                 <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
             </div>
-            <div class="pt-2">
-                <p class="text-[10px] text-slate-500 uppercase font-bold">Submitted on</p>
-                <p class="text-xs text-white">${new Date(s.created_at).toLocaleDateString()}</p>
+            <div class="pt-2 flex justify-between">
+                <div>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Performance Date</p>
+                    <p class="text-xs text-white">${s.performance_date || 'N/A'}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Location</p>
+                    <p class="text-xs text-white">${s.city || 'N/A'}</p>
+                </div>
             </div>
         </div>
     `).join('');
@@ -125,19 +134,21 @@ window.searchWorks = async (query) => {
             .from('works')
             .select(`
                 *,
-                composer:composer_id (first_name, last_name)
+                composer:composer_id (name)
             `)
             .ilike('title', `%${query}%`)
             .eq('status', 'validated') // Only search for works already validated by composers
             .limit(5);
 
         if (works && works.length > 0) {
-            resultsDiv.innerHTML = works.map(w => `
-                <div onclick="selectWork(${w.id}, '${w.title.replace(/'/g, "\\'")}', '${w.composer.first_name} ${w.composer.last_name}')" class="p-3 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0">
+            resultsDiv.innerHTML = works.map(w => {
+                const composerName = w.composer ? w.composer.name.replace(/'/g, "\\'") : 'Unknown';
+                return `
+                <div onclick="selectWork(${w.id}, '${w.title.replace(/'/g, "\\'")}', '${composerName}')" class="p-3 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0">
                     <p class="text-sm font-bold text-white">${w.title}</p>
-                    <p class="text-[10px] text-slate-500 uppercase">${w.composer.first_name} ${w.composer.last_name}</p>
+                    <p class="text-[10px] text-slate-500 uppercase">${w.composer?.name || 'Unknown'}</p>
                 </div>
-            `).join('');
+            `}).join('');
             resultsDiv.classList.remove('hidden');
         } else {
             resultsDiv.innerHTML = '<p class="p-3 text-xs text-slate-500">No results found</p>';
@@ -157,26 +168,40 @@ window.selectWork = (id, title, composer) => {
 
 window.submitInterpretation = async () => {
     const workId = document.getElementById('selected-work-id').value;
-    const title = document.getElementById('selected-title').textContent;
-    const link = document.getElementById('performance-link').value;
+    const date = document.getElementById('perf-date').value;
+    const event = document.getElementById('perf-event').value;
+    const premiere = document.getElementById('perf-premiere').value;
+    const ensemble = document.getElementById('perf-ensemble').value;
+    const conductor = document.getElementById('perf-conductor').value;
+    const venue = document.getElementById('perf-venue').value;
+    const city = document.getElementById('perf-city').value;
+    const country = document.getElementById('perf-country').value;
+    const link = document.getElementById('perf-link').value;
+    const photo = document.getElementById('perf-photo').value;
+    const notes = document.getElementById('perf-notes').value;
+    const feedback = document.getElementById('perf-feedback').value;
 
-    if (!workId) return alert("Please select a work from the archive");
-
-    // Get the composer_id from the original work to notify them
-    const { data: originalWork } = await supabase
-        .from('works')
-        .select('composer_id, year')
-        .eq('id', workId)
-        .single();
+    if (!workId) return alert("Please select a work from the archive.");
+    if (!date) return alert("Please select a performance date.");
 
     const { error } = await supabase
-        .from('works')
+        .from('performances')
         .insert({
-            title: title + " (Interpretation)",
-            year: originalWork.year,
-            composer_id: originalWork.composer_id,
-            submitted_by: currentUser.id,
-            status: 'pending' // Musician submissions are always pending validation
+            work_id: workId,
+            performer_id: currentUser.id,
+            performance_date: date,
+            event_name: event,
+            venue: venue,
+            city: city,
+            country: country,
+            premiere_status: premiere,
+            ensemble_name: ensemble,
+            conductor: conductor,
+            recording_link: link,
+            photo_link: photo,
+            program_notes: notes,
+            performance_note: feedback,
+            status: 'pending' // Pending validation by composer
         });
 
     if (error) {
@@ -187,6 +212,87 @@ window.submitInterpretation = async () => {
         await loadStats();
         await loadSubmissions();
     }
+};
+
+window.processCSV = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async function(results) {
+            const rows = results.data;
+            let successCount = 0;
+            let failCount = 0;
+
+            alert(`Processing ${rows.length} rows. Please wait...`);
+
+            for (const row of rows) {
+                // Find work_id by title
+                const title = row['Work Title'] || row['Title'] || row['work_title'];
+                if (!title) { failCount++; continue; }
+
+                const { data: works } = await supabase
+                    .from('works')
+                    .select('id')
+                    .ilike('title', title)
+                    .limit(1);
+
+                if (!works || works.length === 0) {
+                    console.warn(`Work not found: ${title}`);
+                    failCount++;
+                    continue;
+                }
+
+                const workId = works[0].id;
+                
+                // Format date if needed, basic check
+                let perfDate = row['Performance Date'] || row['Date'] || row['performance_date'];
+                if (perfDate && perfDate.includes('/')) {
+                    // Try to convert DD/MM/YYYY to YYYY-MM-DD
+                    const parts = perfDate.split('/');
+                    if (parts.length === 3 && parts[2].length === 4) {
+                        perfDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                }
+
+                const { error } = await supabase
+                    .from('performances')
+                    .insert({
+                        work_id: workId,
+                        performer_id: currentUser.id,
+                        performance_date: perfDate || null,
+                        event_name: row['Event / Festival Name'] || row['Event'] || null,
+                        venue: row['Venue'] || null,
+                        city: row['City'] || null,
+                        country: row['Country'] || null,
+                        premiere_status: row['Premiere Status'] || 'Standard Performance',
+                        ensemble_name: row['Ensemble / Soloist Name'] || row['Ensemble'] || null,
+                        conductor: row['Conductor'] || null,
+                        recording_link: row['Live Recording Link'] || row['Link'] || null,
+                        photo_link: row['Photo / Poster'] || null,
+                        program_notes: row['Program Notes (Used)'] || row['Notes'] || null,
+                        performance_note: row['Performance Note'] || row['Feedback'] || null,
+                        status: 'pending'
+                    });
+
+                if (error) {
+                    console.error("Error inserting:", error);
+                    failCount++;
+                } else {
+                    successCount++;
+                }
+            }
+
+            alert(`CSV Import Complete!\nSuccessfully imported: ${successCount}\nFailed: ${failCount} (Usually because the Work Title was not found in the archive).`);
+            await loadStats();
+            await loadSubmissions();
+            
+            // Reset input
+            event.target.value = '';
+        }
+    });
 };
 
 function showSection(sectionId) {
