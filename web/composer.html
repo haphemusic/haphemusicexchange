@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="js/auth.js"></script>
     <script type="module" src="js/composer.js"></script>
@@ -52,6 +53,167 @@
             background: rgba(255, 255, 255, 0.05);
             border-color: rgba(229, 115, 115, 0.3);
         }
+        /* ── Detail Modal (Matches search detail modal) ──────────────── */
+        #work-detail-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #work-detail-modal.open { display: flex; animation: fadeIn 0.2s ease-out; }
+        #work-detail-container {
+            background: #0d1c2d;
+            border: 1px solid rgba(229,115,115,0.25);
+            border-radius: 24px;
+            max-width: 680px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 36px;
+            position: relative;
+            animation: slideDown 0.25s ease-out;
+        }
+        #work-detail-container::-webkit-scrollbar { width: 4px; }
+        #work-detail-container::-webkit-scrollbar-thumb { background: rgba(229,115,115,0.3); border-radius: 4px; }
+        
+        .modal-section-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(212,228,250,0.4);
+            margin-bottom: 10px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .modal-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .modal-label { color: rgba(212,228,250,0.45); min-width: 160px; flex-shrink: 0; }
+        .modal-value { color: #d4e4fa; }
+
+        /* Badges */
+        .work-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .badge-electronics { background: rgba(99,179,237,0.15); color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
+        .badge-solo        { background: rgba(154,205,144,0.15); color: #9ACD90; border: 1px solid rgba(154,205,144,0.3); }
+        .badge-duo         { background: rgba(183,148,244,0.15); color: #b794f4; border: 1px solid rgba(183,148,244,0.3); }
+        .badge-chamber     { background: rgba(246,173,85,0.15);  color: #f6ad55; border: 1px solid rgba(246,173,85,0.3); }
+        .badge-ensemble    { background: rgba(246,173,85,0.15);  color: #f6ad55; border: 1px solid rgba(246,173,85,0.3); }
+        .badge-orchestra   { background: rgba(229,115,115,0.15); color: #E57373; border: 1px solid rgba(229,115,115,0.3); }
+        .badge-other       { background: rgba(160,174,192,0.15); color: #a0aec0; border: 1px solid rgba(160,174,192,0.3); }
+        .badge-diff-student     { background: rgba(154,205,144,0.12); color: #9ACD90; }
+        .badge-diff-advanced    { background: rgba(246,173,85,0.12);  color: #f6ad55; }
+        .badge-diff-professional{ background: rgba(229,115,115,0.12); color: #E57373; }
+
+        /* ── Delete Confirmation Modal ────────────────────────────── */
+        #confirm-delete-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #confirm-delete-modal.open { display: flex; animation: fadeIn 0.2s ease-out; }
+        /* Wizard */
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; animation: fadeIn 0.25s ease-out; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        .wiz-input {
+            width: 100% !important;
+            background: #0d1c2d !important;
+            background-color: #0d1c2d !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: #d4e4fa !important;
+            -webkit-text-fill-color: #d4e4fa !important;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+            color-scheme: dark;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .wiz-input:focus { border-color: #E57373 !important; }
+        .wiz-input::placeholder {
+            color: rgba(139, 150, 172, 0.55) !important;
+            -webkit-text-fill-color: rgba(139, 150, 172, 0.55) !important;
+        }
+        .wiz-input option {
+            background: #0d1c2d !important;
+            background-color: #0d1c2d !important;
+            color: #d4e4fa !important;
+        }
+        /* Override browser autofill blue/yellow */
+        .wiz-input:-webkit-autofill,
+        .wiz-input:-webkit-autofill:hover,
+        .wiz-input:-webkit-autofill:focus,
+        .wiz-input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 9999px #0d1c2d inset !important;
+            -webkit-text-fill-color: #d4e4fa !important;
+            caret-color: #d4e4fa;
+        }
+        /* Select: show custom arrow */
+        select.wiz-input {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238b96ac' d='M1 1l5 5 5-5'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 14px center !important;
+            background-color: #0d1c2d !important;
+            padding-right: 36px;
+            cursor: pointer;
+        }
+        textarea.wiz-input {
+            -webkit-text-fill-color: #d4e4fa !important;
+            resize: vertical;
+            min-height: 90px;
+        }
+        /* Radio labels */
+        .wiz-radio-group { display: flex; gap: 20px; margin-top: 6px; }
+        .wiz-radio-group label {
+            display: flex; align-items: center; gap: 8px;
+            color: #d4e4fa; font-size: 14px; cursor: pointer;
+        }
+        input[type="radio"] { accent-color: #E57373; width: 16px; height: 16px; }
+        /* Date input icon color */
+        input[type="date"].wiz-input::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+
+
+        .wiz-label {
+            display: block; font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            color: rgba(212,228,250,0.45); margin-bottom: 5px;
+        }
+        .wiz-field { margin-bottom: 16px; }
+        .step-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,0.15); transition: all 0.2s;
+        }
+        .step-dot.done { background: #E57373; }
+        .step-dot.active { background: #E57373; transform: scale(1.4); }
     </style>
 </head>
 <body class="bg-surface-container-lowest text-on-surface font-sans flex h-screen overflow-hidden">
@@ -230,33 +392,310 @@
         </div>
     </main>
 
-    <!-- WORK REGISTRATION MODAL -->
-    <div id="work-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
-        <div class="glass-panel w-full max-w-lg rounded-3xl p-8 space-y-6">
-            <h2 class="text-2xl font-bold text-white">Register Composition</h2>
-            <div class="space-y-4">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Title</label>
-                    <input type="text" id="work-title" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon" >
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Year</label>
-                        <input type="number" id="work-year" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon" value="2024">
+    <!-- WORK REGISTRATION MODAL (Wizard) -->
+    <div id="work-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-2xl rounded-3xl overflow-hidden" style="max-height:90vh;display:flex;flex-direction:column">
+
+            <!-- Header -->
+            <div style="padding:28px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                    <div>
+                        <h2 style="font-size:20px;font-weight:700;color:#fff;margin-bottom:2px">Register New Composition</h2>
+                        <p id="wiz-step-label" style="font-size:11px;color:#8b96ac;text-transform:uppercase;letter-spacing:0.1em">Step 1 of 6 — General Information</p>
                     </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Instrumentation</label>
-                        <input type="text" id="work-instr" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon" >
-                    </div>
+                    <button onclick="closeWorkModal()" style="background:rgba(255,255,255,0.06);border:none;color:#d4e4fa;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">
+                        <span class="material-symbols-outlined" style="font-size:18px">close</span>
+                    </button>
                 </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">External Link (YouTube/Spotify)</label>
-                    <input type="url" id="work-link" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon" >
+                <!-- Step dots and Excel Trigger -->
+                <div id="excel-import-trigger-wrapper" style="margin-top: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display:flex;gap:8px;" id="wiz-dots-wrapper">
+                        <div style="display:flex;gap:8px;" id="wiz-dots">
+                            <div class="step-dot active" id="dot-0"></div>
+                            <div class="step-dot" id="dot-1"></div>
+                            <div class="step-dot" id="dot-2"></div>
+                            <div class="step-dot" id="dot-3"></div>
+                            <div class="step-dot" id="dot-4"></div>
+                            <div class="step-dot" id="dot-5"></div>
+                        </div>
+                    </div>
+                    <button onclick="toggleExcelImportPanel()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px]">table_view</span> Import Excel / CSV
+                    </button>
+                </div>
+
+                <!-- Excel / CSV Import Panel (Collapsible) -->
+                <div id="excel-import-panel" style="display: none; margin-top: 16px; padding: 16px; background: rgba(229,115,115,0.05); border: 1px dashed rgba(229,115,115,0.3); border-radius: 16px; animation: slideDown 0.25s ease-out;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="font-size: 11px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.05em;">Auto-fill from Excel or CSV sheet</h4>
+                        <button onclick="toggleExcelImportPanel()" style="background: none; border: none; color: rgba(212,228,250,0.5); cursor: pointer;" class="hover:text-white">
+                            <span class="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                    </div>
+                    <div style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; background: rgba(13,28,45,0.4);" class="hover:border-salmon/50 transition-colors">
+                        <span class="material-symbols-outlined text-salmon text-3xl mb-2">upload_file</span>
+                        <p style="font-size: 12px; color: #d4e4fa; margin-bottom: 2px; font-weight: 500;">Drag & drop your spreadsheet here or click to browse</p>
+                        <p style="font-size: 10px; color: rgba(212,228,250,0.4);">Supports .xlsx, .xls, .csv</p>
+                        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" onchange="handleExcelUpload(event)" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+                    </div>
+                    <div id="excel-import-status" style="margin-top: 10px; display: none; font-size: 11px; color: #9ACD90; font-weight: 600; text-align: center; align-items: center; justify-content: center; gap: 4px;">
+                        <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                        <span>Excel parsed! Fields auto-filled successfully!</span>
+                    </div>
                 </div>
             </div>
-            <div class="flex gap-4 pt-4">
-                <button onclick="saveWork()" class="flex-1 bg-salmon text-white py-3 rounded-xl font-bold hover:brightness-110 transition-all">Submit to Archive</button>
-                <button onclick="closeWorkModal()" class="px-6 py-3 bg-white/5 text-white rounded-xl font-bold border border-white/10">Cancel</button>
+
+            <!-- Steps scroll area -->
+            <div style="flex:1;overflow-y:auto;padding:28px 32px" id="wiz-body">
+
+                <!-- STEP 1: General -->
+                <div class="wizard-step active" id="wiz-step-0">
+                    <div class="wiz-field">
+                        <label class="wiz-label">Title <span style="color:#E57373">*</span></label>
+                        <input class="wiz-input" id="w-title" type="text" placeholder="Original title of the work">
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Subtitle / Version</label>
+                        <input class="wiz-input" id="w-subtitle" type="text" placeholder="e.g. Revised version, Op. 3b">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="wiz-field">
+                            <label class="wiz-label">Year of Composition <span style="color:#E57373">*</span></label>
+                            <input class="wiz-input" id="w-year" type="number" placeholder="2024" value="2024">
+                        </div>
+                        <div class="wiz-field">
+                            <label class="wiz-label">Duration (minutes)</label>
+                            <input class="wiz-input" id="w-duration" type="number" step="0.5" placeholder="e.g. 12.5">
+                        </div>
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Catalogue Number</label>
+                        <input class="wiz-input" id="w-catalogue" type="text" placeholder="Op. 7, BWV 143, etc.">
+                    </div>
+                </div>
+
+                <!-- STEP 2: Scoring & Instrumentation -->
+                <div class="wizard-step" id="wiz-step-1">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="wiz-field">
+                            <label class="wiz-label">Scoring Category <span style="color:#E57373">*</span></label>
+                            <select class="wiz-input" id="w-scoring">
+                                <option value="">— Select —</option>
+                                <option value="solo">Solo</option>
+                                <option value="duo">Duo</option>
+                                <option value="trio">Trio</option>
+                                <option value="chamber">Chamber</option>
+                                <option value="ensemble">Ensemble</option>
+                                <option value="orchestra">Orchestra</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="wiz-field">
+                            <label class="wiz-label">Number of Performers</label>
+                            <input class="wiz-input" id="w-numperf" type="number" placeholder="e.g. 4">
+                        </div>
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Combination of Performers</label>
+                        <input class="wiz-input" id="w-combination" type="text" placeholder="e.g. String Quartet, Woodwind Quintet">
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Detailed Instrumentation</label>
+                        <input class="wiz-input" id="w-instrumentation" type="text" placeholder="Fl, Cl in Bb, Pno, Vln, Vc">
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Soloist Instrument</label>
+                        <input class="wiz-input" id="w-soloist" type="text" placeholder="If applicable">
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Unusual Objects / Preparations</label>
+                        <input class="wiz-input" id="w-preparations" type="text" placeholder="e.g. prepared piano, crotales">
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Space Requirements</label>
+                        <input class="wiz-input" id="w-space" type="text" placeholder="Special spatial arrangement needed?">
+                    </div>
+                </div>
+
+                <!-- STEP 3: Electronics -->
+                <div class="wizard-step" id="wiz-step-2">
+                    <div class="wiz-field">
+                        <label class="wiz-label">Does this work use electronics?</label>
+                        <div style="display:flex;gap:12px;margin-top:4px">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#d4e4fa;font-size:14px">
+                                <input type="radio" name="w-electronics" id="w-elec-yes" value="true" style="accent-color:#E57373"> Yes
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#d4e4fa;font-size:14px">
+                                <input type="radio" name="w-electronics" id="w-elec-no" value="false" checked style="accent-color:#E57373"> No
+                            </label>
+                        </div>
+                    </div>
+                    <div id="electronics-fields" style="display:none">
+                        <div class="wiz-field">
+                            <label class="wiz-label">Type of Electronics</label>
+                            <select class="wiz-input" id="w-elec-type">
+                                <option value="">— Select —</option>
+                                <option value="Live electronics">Live electronics</option>
+                                <option value="Fixed media">Fixed media</option>
+                                <option value="Interactive">Interactive</option>
+                                <option value="Mixed">Mixed (live + fixed)</option>
+                            </select>
+                        </div>
+                        <div class="wiz-field">
+                            <label class="wiz-label">Required Software / Technology</label>
+                            <input class="wiz-input" id="w-elec-software" type="text" placeholder="Max/MSP, Ableton Live, specific patches...">
+                        </div>
+                    </div>
+                    <p style="color:rgba(212,228,250,0.35);font-size:12px;margin-top:8px">If no electronics are used, you can skip directly to the next step.</p>
+                </div>
+
+                <!-- STEP 4: Premiere -->
+                <div class="wizard-step" id="wiz-step-3">
+                    <p style="color:rgba(212,228,250,0.45);font-size:12px;margin-bottom:20px">All fields in this section are optional.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="wiz-field">
+                            <label class="wiz-label">Premiere Date</label>
+                            <input class="wiz-input" id="w-prem-date" type="date">
+                        </div>
+                        <div class="wiz-field">
+                            <label class="wiz-label">Premiere City</label>
+                            <input class="wiz-input" id="w-prem-city" type="text" placeholder="Madrid, Paris...">
+                        </div>
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Premiere Venue</label>
+                        <input class="wiz-input" id="w-prem-venue" type="text" placeholder="Auditorio Nacional, L'Auditori...">
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Premiere Performers</label>
+                        <input class="wiz-input" id="w-prem-performers" type="text" placeholder="Ensemble name or soloist">
+                    </div>
+                </div>
+
+                <!-- STEP 5: Production & Rights + Multimedia -->
+                <div class="wizard-step" id="wiz-step-4">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="wiz-field">
+                            <label class="wiz-label">Commissioned by</label>
+                            <input class="wiz-input" id="w-commissioned" type="text" placeholder="Institution or person">
+                        </div>
+                        <div class="wiz-field">
+                            <label class="wiz-label">Publisher</label>
+                            <input class="wiz-input" id="w-publisher" type="text" placeholder="Editorial Tritó, Self-published...">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="wiz-field">
+                            <label class="wiz-label">Score Status</label>
+                            <select class="wiz-input" id="w-score-status">
+                                <option value="finished">Finished</option>
+                                <option value="in_progress">In progress</option>
+                                <option value="unpublished">Unpublished</option>
+                            </select>
+                        </div>
+                        <div class="wiz-field">
+                            <label class="wiz-label">Availability of Materials</label>
+                            <select class="wiz-input" id="w-availability">
+                                <option value="">— Select —</option>
+                                <option value="for_sale">For sale</option>
+                                <option value="rental">Rental</option>
+                                <option value="free_download">Free download</option>
+                                <option value="not_available">Not available</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Score Sample URL (PDF link)</label>
+                        <input class="wiz-input" id="w-score-url" type="url" placeholder="https://...">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="wiz-field">
+                            <label class="wiz-label">Audio / Video Link</label>
+                            <input class="wiz-input" id="w-media-url" type="url" placeholder="YouTube, SoundCloud, Vimeo...">
+                        </div>
+                        <div class="wiz-field">
+                            <label class="wiz-label">Recording Type</label>
+                            <select class="wiz-input" id="w-recording-type">
+                                <option value="none">None</option>
+                                <option value="live">Live</option>
+                                <option value="studio">Studio</option>
+                                <option value="midi">MIDI</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 6: Context & Search -->
+                <div class="wizard-step" id="wiz-step-5">
+                    <div class="wiz-field">
+                        <label class="wiz-label">Program Notes</label>
+                        <textarea class="wiz-input" id="w-notes" rows="4" placeholder="Describe the work, its concept and creative process..."></textarea>
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Aesthetic / Style Tags <span style="color:rgba(212,228,250,0.4);font-size:10px;text-transform:none">(comma-separated)</span></label>
+                        <input class="wiz-input" id="w-tags" type="text" placeholder="Spectralism, Minimalism, Microtonal...">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="wiz-field">
+                            <label class="wiz-label">Technical Difficulty</label>
+                            <select class="wiz-input" id="w-difficulty">
+                                <option value="">— Select —</option>
+                                <option value="student">Student</option>
+                                <option value="advanced">Advanced</option>
+                                <option value="professional">Professional</option>
+                            </select>
+                        </div>
+                        <div class="wiz-field">
+                            <label class="wiz-label">Language / Librettist</label>
+                            <input class="wiz-input" id="w-language" type="text" placeholder="For vocal works">
+                        </div>
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Additional Info</label>
+                        <input class="wiz-input" id="w-additional" type="text" placeholder="Any other relevant information">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:20px 32px;border-top:1px solid rgba(255,255,255,0.07);display:flex;justify-content:space-between;align-items:center;gap:12px">
+                <button id="wiz-back" onclick="wizStep(-1)" style="display:none;padding:10px 24px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#d4e4fa;font-size:14px;font-weight:600;cursor:pointer">← Back</button>
+                <div style="flex:1"></div>
+                <button onclick="closeWorkModal()" style="padding:10px 20px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#8b96ac;font-size:14px;cursor:pointer">Cancel</button>
+                <button id="wiz-next" onclick="wizStep(1)" style="padding:10px 28px;background:#E57373;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Next →</button>
+                <button id="wiz-submit" onclick="saveWork()" style="display:none;padding:10px 28px;background:#E57373;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">
+                    <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">upload</span> Submit to Archive
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORK DETAIL MODAL -->
+    <div id="work-detail-modal" onclick="if(event.target === this) window.closeWorkDetail()">
+        <div id="work-detail-container">
+            <!-- Content will be injected dynamically -->
+            <div id="work-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div id="confirm-delete-modal" onclick="if(event.target === this) window.closeConfirmDelete()">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-8 space-y-6 text-center border-rose-500/30">
+            <div class="w-16 h-16 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined text-3xl">warning</span>
+            </div>
+            <h3 class="text-xl font-bold text-white">Delete Composition?</h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+                Are you sure you want to delete <span id="confirm-delete-title" class="font-semibold text-rose-400">this work</span>? This action is permanent and cannot be undone.
+            </p>
+            <div class="flex gap-4 pt-2">
+                <button id="confirm-delete-btn" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl font-bold transition-all duration-300 active:scale-95">
+                    Delete Permanently
+                </button>
+                <button onclick="window.closeConfirmDelete()" class="px-6 py-3 bg-white/5 text-white rounded-xl font-bold border border-white/10 hover:bg-white/10 transition-all">
+                    Cancel
+                </button>
             </div>
         </div>
     </div>

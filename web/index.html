@@ -48,17 +48,21 @@
         .cascade-wrapper { position: relative; }
         .cascade-menu {
             display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
+            position: relative;
+            margin-top: 8px;
             z-index: 9999;
-            min-width: 240px;
+            min-width: 100%;
             background: #0d1c2d;
             border: 1px solid rgba(229, 115, 115, 0.4);
             border-radius: 12px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
             padding: 8px 0;
             backdrop-filter: blur(25px);
+            animation: slideDown 0.2s ease-out;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
         .cascade-item {
             padding: 12px 16px;
@@ -75,6 +79,15 @@
             background: rgba(229, 115, 115, 0.15);
             color: #E57373;
         }
+        .cascade-item::after {
+            content: '›';
+            font-size: 16px;
+            color: rgba(212,228,250,0.4);
+            display: none;
+        }
+        .cascade-item:has(.cascade-submenu)::after {
+            display: block;
+        }
         .cascade-submenu {
             display: none;
             position: absolute;
@@ -88,6 +101,11 @@
             padding: 8px 0;
             box-shadow: 20px 20px 50px rgba(0,0,0,0.8);
             z-index: 10000;
+            animation: slideRight 0.15s ease-out;
+        }
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
         }
         .cascade-item:hover > .cascade-submenu {
             display: block;
@@ -99,6 +117,92 @@
             from { opacity: 0; transform: scale(0.9); }
             to { opacity: 1; transform: scale(1); }
         }
+
+        /* ── Work Cards ─────────────────────────────────────────── */
+        .work-card {
+            background: rgba(13, 28, 45, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 24px;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .work-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(229,115,115,0.35);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+        }
+        .work-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .badge-electronics { background: rgba(99,179,237,0.15); color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
+        .badge-solo        { background: rgba(154,205,144,0.15); color: #9ACD90; border: 1px solid rgba(154,205,144,0.3); }
+        .badge-duo         { background: rgba(183,148,244,0.15); color: #b794f4; border: 1px solid rgba(183,148,244,0.3); }
+        .badge-chamber     { background: rgba(246,173,85,0.15);  color: #f6ad55; border: 1px solid rgba(246,173,85,0.3); }
+        .badge-ensemble    { background: rgba(246,173,85,0.15);  color: #f6ad55; border: 1px solid rgba(246,173,85,0.3); }
+        .badge-orchestra   { background: rgba(229,115,115,0.15); color: #E57373; border: 1px solid rgba(229,115,115,0.3); }
+        .badge-other       { background: rgba(160,174,192,0.15); color: #a0aec0; border: 1px solid rgba(160,174,192,0.3); }
+        .badge-diff-student     { background: rgba(154,205,144,0.12); color: #9ACD90; }
+        .badge-diff-advanced    { background: rgba(246,173,85,0.12);  color: #f6ad55; }
+        .badge-diff-professional{ background: rgba(229,115,115,0.12); color: #E57373; }
+
+        /* ── Modal ───────────────────────────────────────────────── */
+        #work-modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #work-modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease-out; }
+        #work-modal {
+            background: #0d1c2d;
+            border: 1px solid rgba(229,115,115,0.25);
+            border-radius: 24px;
+            max-width: 680px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 36px;
+            position: relative;
+            animation: slideDown 0.25s ease-out;
+        }
+        #work-modal::-webkit-scrollbar { width: 4px; }
+        #work-modal::-webkit-scrollbar-thumb { background: rgba(229,115,115,0.3); border-radius: 4px; }
+        .modal-section-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(212,228,250,0.4);
+            margin-bottom: 10px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .modal-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .modal-label { color: rgba(212,228,250,0.45); min-width: 160px; flex-shrink: 0; }
+        .modal-value { color: #d4e4fa; }
     </style>
 </head>
 <body class="bg-surface-container-lowest text-on-surface font-body-md selection:bg-salmon selection:text-white">
@@ -135,7 +239,7 @@
 
     <!-- Search Section -->
     <section class="glass-panel rounded-3xl p-8 mb-20 relative group">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end relative z-20">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-start relative z-20">
             
             <!-- Instrumentation Selector (Cascading) -->
             <div class="space-y-2 col-span-1 md:col-span-2">
@@ -181,10 +285,13 @@
                 </div>
             </div>
 
-            <button onclick="filterWorks()" class="bg-salmon text-white h-[50px] rounded-xl font-medium flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all duration-300 w-full mt-auto">
-                <span class="material-symbols-outlined">search</span>
-                Explore
-            </button>
+            <div class="space-y-2">
+                <label class="hidden xl:block font-label-sm text-xs text-transparent select-none uppercase font-semibold">Explore</label>
+                <button onclick="filterWorks()" class="bg-salmon text-white h-[50px] rounded-xl font-medium flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all duration-300 w-full">
+                    <span class="material-symbols-outlined">search</span>
+                    Explore
+                </button>
+            </div>
         </div>
         
         <!-- Tags Container below the grid -->
@@ -210,6 +317,11 @@
         </div>
     </section>
 </main>
+
+<!-- ── Work Detail Modal ─────────────────────────────────────── -->
+<div id="work-modal-backdrop">
+    <div id="work-modal"></div>
+</div>
 
 <footer class="w-full py-12 px-8 flex flex-col md:flex-row justify-between items-center max-w-[1440px] mx-auto mt-20 border-t border-white/5 bg-slate-950 mb-20">
     <p class="font-sans text-xs uppercase tracking-widest text-slate-500 text-center md:text-left mb-6 md:mb-0">
@@ -272,7 +384,20 @@
     async function loadWorks() {
         const { data, error } = await supabase
             .from('works')
-            .select('*, composer:composer_id(name, nationality, period)');
+            .select(`
+                id, title, subtitle, year, duration_minutes, catalogue_number,
+                scoring_category, num_performers, performer_combination,
+                soloist_instrument, unusual_preparations,
+                has_electronics, electronics_type, electronics_software,
+                premiere_date, premiere_venue, premiere_city, premiere_performers,
+                commissioned_by, publisher, score_status, score_availability,
+                score_sample_url, media_url, recording_type,
+                program_notes, style_tags, language_librettist,
+                technical_difficulty, space_requirements, additional_info,
+                status, created_at,
+                composer:composer_id(name, nationality, period),
+                submitter:submitted_by(first_name, last_name)
+            `);
 
         if (error) {
             console.error('Failed to load works:', error);
@@ -285,7 +410,9 @@
     async function loadData() {
         await Promise.all([loadInstruments(), loadWorkInstruments(), loadWorks()]);
         
-        const uniqueNationalities = [...new Set(allWorks.map(w => w.composer?.nationality).filter(Boolean))].sort();
+        const uniqueNationalities = [...new Set(allWorks.map(w => 
+            w.composer?.nationality || w.submitter?.nationality
+        ).filter(Boolean))].sort();
         const sel = document.getElementById('country-select');
         sel.innerHTML = '<option value="">All Countries</option>' + uniqueNationalities.map(c => `<option value="${c}">${c}</option>`).join('');
 
@@ -330,8 +457,21 @@
 
     window.toggleMainList = () => {
         const m = document.getElementById('main-list');
-        m.style.display = m.style.display === 'block' ? 'none' : 'block';
+        const isOpen = m.style.display === 'block';
+        m.style.display = isOpen ? 'none' : 'block';
+        const btn = document.getElementById('instrument-btn');
+        btn.style.borderColor = isOpen ? '' : 'rgba(229,115,115,0.7)';
     };
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const wrapper = document.querySelector('.cascade-wrapper');
+        const m = document.getElementById('main-list');
+        if (wrapper && !wrapper.contains(e.target) && m.style.display === 'block') {
+            m.style.display = 'none';
+            document.getElementById('instrument-btn').style.borderColor = '';
+        }
+    });
 
     window.viewAllWorks = () => {
         filterWorks();
@@ -368,6 +508,20 @@
         renderResults(results);
     };
 
+    // ── Scoring badge helper ───────────────────────────────────────
+    function scoringBadge(cat) {
+        if (!cat) return '';
+        const cls = `badge-${cat}`;
+        const icons = { solo:'person', duo:'group', trio:'groups', chamber:'piano', ensemble:'queue_music', orchestra:'library_music', other:'music_note' };
+        const icon = icons[cat] || 'music_note';
+        return `<span class="work-badge ${cls}"><span class="material-symbols-outlined" style="font-size:11px">${icon}</span>${cat}</span>`;
+    }
+    function diffBadge(d) {
+        if (!d) return '';
+        return `<span class="work-badge badge-diff-${d}">${d}</span>`;
+    }
+
+    // ── Render work cards ──────────────────────────────────────────
     function renderResults(works) {
         const grid = document.getElementById('works-grid');
         const noResults = document.getElementById('no-results');
@@ -375,37 +529,169 @@
 
         if (!works || works.length === 0) {
             grid.innerHTML = '';
-            if (allWorks.length === 0) {
-                noResultsText.textContent = 'No works exist in the configured Supabase project yet. Add records to the `works` table or check your Supabase URL/API key.';
-            } else {
-                noResultsText.textContent = 'Try adjusting your filters or selecting different instruments.';
-            }
+            noResultsText.textContent = allWorks.length === 0
+                ? 'No works exist yet. Add records to the `works` table or check your Supabase config.'
+                : 'No works match the selected filters.';
             noResults.classList.remove('hidden');
             return;
         }
 
         noResults.classList.add('hidden');
         grid.innerHTML = works.map(w => {
-            const composerName = w.composer?.name || 'Unknown Composer';
-            const residenceCountry = w.composer?.nationality || 'Unknown Country';
-            const instruments = (workInstrumentsMap[w.id] || [])
-                .map(item => item.variant || item.name)
-                .filter(Boolean)
-                .join(', ');
+            const composerName = w.composer?.name
+                || (w.submitter ? `${w.submitter.first_name || ''} ${w.submitter.last_name || ''}`.trim() : '')
+                || 'Unknown Composer';
+            const location     = w.composer?.nationality || w.submitter?.nationality || '';
+            const instruments  = (workInstrumentsMap[w.id] || []).map(i => i.name).filter(Boolean).join(', ');
+            const stylePills   = (w.style_tags || []).slice(0,3).map(t =>
+                `<span style="background:rgba(229,115,115,0.12);color:#E57373;border:1px solid rgba(229,115,115,0.2);padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600">${t}</span>`
+            ).join('');
+            const duration     = w.duration_minutes ? `<span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle">timer</span> ${w.duration_minutes} min` : '';
+            const elec         = w.has_electronics ? `<span class="work-badge badge-electronics"><span class="material-symbols-outlined" style="font-size:11px">bolt</span>Electronics</span>` : '';
+            const wData        = encodeURIComponent(JSON.stringify(w));
+            const instData     = encodeURIComponent(JSON.stringify(workInstrumentsMap[w.id] || []));
 
             return `
-                <div class="glass-panel p-4 rounded-2xl">
-                    <h3 class="text-white font-medium">${w.title}</h3>
-                    <p class="text-slate-400 text-sm">${composerName}</p>
-                    <p class="text-[12px] text-slate-400 mb-3">${instruments || 'Instruments not specified'}</p>
-                    <p class="text-xs text-salmon">${residenceCountry} | ${w.year}</p>
+            <div class="work-card" onclick="window.openWorkModal('${wData}','${instData}')">
+                <!-- Top badges -->
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+                    ${scoringBadge(w.scoring_category)}
+                    ${diffBadge(w.technical_difficulty)}
+                    ${elec}
                 </div>
-            `;
+
+                <!-- Title & Composer -->
+                <h3 style="color:#fff;font-size:16px;font-weight:600;line-height:1.3;margin-bottom:4px">${w.title}${w.subtitle ? `<span style='color:rgba(212,228,250,0.45);font-weight:400;font-size:13px'> — ${w.subtitle}</span>` : ''}</h3>
+                <p style="color:#8b96ac;font-size:13px;margin-bottom:12px">${composerName}</p>
+
+                <!-- Instruments -->
+                <p style="color:#a0aec0;font-size:12px;margin-bottom:12px;min-height:18px">
+                    <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;margin-right:4px">piano</span>${instruments || w.performer_combination || 'Instrumentation not specified'}
+                </p>
+
+                <!-- Style tags -->
+                ${stylePills ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">${stylePills}</div>` : ''}
+
+                <!-- Divider -->
+                <div style="border-top:1px solid rgba(255,255,255,0.06);margin-bottom:12px"></div>
+
+                <!-- Footer: country | year | duration -->
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#E57373;font-size:11px;font-weight:600;letter-spacing:0.06em">
+                        ${[location, w.year].filter(Boolean).join(' · ')}
+                    </span>
+                    <span style="color:#8b96ac;font-size:11px">${duration}</span>
+                </div>
+            </div>`;
         }).join('');
     }
 
+    // ── Work Detail Modal ──────────────────────────────────────────
+    window.openWorkModal = (wEncoded, instEncoded) => {
+        const w    = JSON.parse(decodeURIComponent(wEncoded));
+        const inst = JSON.parse(decodeURIComponent(instEncoded));
+        const composerName = w.composer?.name
+            || (w.submitter ? `${w.submitter.first_name || ''} ${w.submitter.last_name || ''}`.trim() : '')
+            || 'Unknown Composer';
+        const country      = w.composer?.nationality || w.submitter?.nationality || '—';
+        const instruments  = inst.map(i => i.name).filter(Boolean).join(', ') || '—';
+
+        const row = (label, value) => value
+            ? `<div class="modal-row"><span class="modal-label">${label}</span><span class="modal-value">${value}</span></div>`
+            : '';
+
+        const stylePills = (w.style_tags || []).map(t =>
+            `<span class="work-badge" style="background:rgba(229,115,115,0.12);color:#E57373;border:1px solid rgba(229,115,115,0.2)">${t}</span>`
+        ).join('');
+
+        document.getElementById('work-modal').innerHTML = `
+            <!-- Close -->
+            <button onclick="window.closeWorkModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.06);border:none;color:#d4e4fa;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+
+            <!-- Header -->
+            <div style="margin-bottom:4px;display:flex;flex-wrap:wrap;gap:6px">
+                ${scoringBadge(w.scoring_category)} ${diffBadge(w.technical_difficulty)}
+                ${w.has_electronics ? '<span class="work-badge badge-electronics"><span class="material-symbols-outlined" style="font-size:11px">bolt</span>Electronics</span>' : ''}
+            </div>
+            <h2 style="color:#fff;font-size:24px;font-weight:700;margin:12px 0 4px;line-height:1.2">${w.title}</h2>
+            ${w.subtitle ? `<p style="color:#8b96ac;font-size:14px;margin-bottom:4px">${w.subtitle}</p>` : ''}
+            <p style="color:#E57373;font-size:13px;font-weight:600">${composerName} · ${country} · ${w.year || '—'}</p>
+
+            ${stylePills ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px">${stylePills}</div>` : ''}
+
+            <!-- General -->
+            <p class="modal-section-title">General Information</p>
+            ${row('Duration', w.duration_minutes ? `${w.duration_minutes} min` : null)}
+            ${row('Catalogue number', w.catalogue_number)}
+            ${row('Score status', w.score_status)}
+            ${row('Availability', w.score_availability?.replace('_',' '))}
+            ${row('Publisher', w.publisher)}
+            ${row('Commissioned by', w.commissioned_by)}
+
+            <!-- Instrumentation -->
+            <p class="modal-section-title">Scoring & Instrumentation</p>
+            ${row('Instruments', instruments)}
+            ${row('Combination', w.performer_combination)}
+            ${row('Number of performers', w.num_performers)}
+            ${row('Soloist', w.soloist_instrument)}
+            ${row('Unusual preparations', w.unusual_preparations)}
+            ${row('Space requirements', w.space_requirements)}
+
+            <!-- Electronics -->
+            ${w.has_electronics ? `
+            <p class="modal-section-title">Electronics</p>
+            ${row('Type', w.electronics_type)}
+            ${row('Software / Tech', w.electronics_software)}
+            ` : ''}
+
+            <!-- Premiere -->
+            ${w.premiere_date || w.premiere_venue ? `
+            <p class="modal-section-title">Premiere</p>
+            ${row('Date', w.premiere_date)}
+            ${row('Venue', w.premiere_venue)}
+            ${row('City', w.premiere_city)}
+            ${row('Performers', w.premiere_performers)}
+            ` : ''}
+
+            <!-- Multimedia -->
+            ${w.media_url || w.score_sample_url ? `
+            <p class="modal-section-title">Multimedia</p>
+            ${w.score_sample_url ? `${row('Score sample', `<a href="${w.score_sample_url}" target="_blank" style="color:#63b3ed;text-decoration:underline">View score ↗</a>`)}`  : ''}
+            ${w.media_url       ? `${row('Recording', `<a href="${w.media_url}" target="_blank" style="color:#63b3ed;text-decoration:underline">Listen / Watch ↗</a>`)}` : ''}
+            ${row('Recording type', w.recording_type)}
+            ` : ''}
+
+            <!-- Context -->
+            ${w.program_notes ? `
+            <p class="modal-section-title">Program Notes</p>
+            <p style="color:#d4e4fa;font-size:13px;line-height:1.7;opacity:0.85">${w.program_notes}</p>
+            ` : ''}
+
+            ${w.language_librettist ? `
+            <p class="modal-section-title">Language / Librettist</p>
+            <p style="color:#d4e4fa;font-size:13px">${w.language_librettist}</p>
+            ` : ''}
+
+            ${w.additional_info ? `
+            <p class="modal-section-title">Additional Info</p>
+            <p style="color:#d4e4fa;font-size:13px">${w.additional_info}</p>
+            ` : ''}
+        `;
+
+        document.getElementById('work-modal-backdrop').classList.add('open');
+    };
+
+    window.closeWorkModal = () => {
+        document.getElementById('work-modal-backdrop').classList.remove('open');
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         loadData();
+        document.getElementById('work-modal-backdrop').addEventListener('click', e => {
+            if (e.target === document.getElementById('work-modal-backdrop')) window.closeWorkModal();
+        });
     });
 </script>
 </body>
