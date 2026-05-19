@@ -167,7 +167,39 @@ window.selectWork = (id, title, composer) => {
 };
 
 window.submitInterpretation = async () => {
-    const workId = document.getElementById('selected-work-id').value;
+    let workId = document.getElementById('selected-work-id').value;
+    const searchInput = document.getElementById('search-work-input').value.trim();
+
+    if (!workId && !searchInput) {
+        alert("Please select a work from the archive or type a new work title.");
+        return;
+    }
+
+    if (!workId && searchInput) {
+        // Try to find if it exists first
+        const { data: existingWorks } = await supabase
+            .from('works')
+            .select('id')
+            .ilike('title', searchInput)
+            .limit(1);
+            
+        if (existingWorks && existingWorks.length > 0) {
+            workId = existingWorks[0].id;
+        } else {
+            // Create a new work
+            const { data: newWork, error: newWorkError } = await supabase
+                .from('works')
+                .insert({ title: searchInput, status: 'unverified' })
+                .select('id')
+                .single();
+                
+            if (newWorkError) {
+                alert("Error creating new work. You might not have permission, or check database settings: " + newWorkError.message);
+                return;
+            }
+            workId = newWork.id;
+        }
+    }
     const date = document.getElementById('perf-date').value;
     const event = document.getElementById('perf-event').value;
     const premiere = document.getElementById('perf-premiere').value;
@@ -209,6 +241,25 @@ window.submitInterpretation = async () => {
     } else {
         alert("Interpretation submitted! The composer will be notified.");
         closeSubmissionModal();
+        
+        // Reset form fields
+        document.getElementById('selected-work-id').value = '';
+        document.getElementById('selected-title').textContent = '---';
+        document.getElementById('selected-composer').textContent = '---';
+        document.getElementById('selected-work-info').classList.add('hidden');
+        document.getElementById('search-work-input').value = '';
+        document.getElementById('perf-date').value = '';
+        document.getElementById('perf-event').value = '';
+        document.getElementById('perf-ensemble').value = '';
+        document.getElementById('perf-conductor').value = '';
+        document.getElementById('perf-venue').value = '';
+        document.getElementById('perf-city').value = '';
+        document.getElementById('perf-country').value = '';
+        document.getElementById('perf-link').value = '';
+        document.getElementById('perf-photo').value = '';
+        document.getElementById('perf-notes').value = '';
+        document.getElementById('perf-feedback').value = '';
+
         await loadStats();
         await loadSubmissions();
     }
@@ -233,6 +284,7 @@ window.processCSV = (event) => {
                 const title = row['Work Title'] || row['Title'] || row['work_title'];
                 if (!title) { failCount++; continue; }
 
+                let workId;
                 const { data: works } = await supabase
                     .from('works')
                     .select('id')
@@ -240,12 +292,22 @@ window.processCSV = (event) => {
                     .limit(1);
 
                 if (!works || works.length === 0) {
-                    console.warn(`Work not found: ${title}`);
-                    failCount++;
-                    continue;
+                    console.log(`Work not found, creating: ${title}`);
+                    const { data: newWork, error: newWorkError } = await supabase
+                        .from('works')
+                        .insert({ title: title, status: 'unverified' })
+                        .select('id')
+                        .single();
+                        
+                    if (newWorkError || !newWork) {
+                        console.error(`Failed to create work ${title}:`, newWorkError);
+                        failCount++;
+                        continue;
+                    }
+                    workId = newWork.id;
+                } else {
+                    workId = works[0].id;
                 }
-
-                const workId = works[0].id;
                 
                 // Format date if needed, basic check
                 let perfDate = row['Performance Date'] || row['Date'] || row['performance_date'];
