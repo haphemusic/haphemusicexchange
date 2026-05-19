@@ -236,7 +236,7 @@ window.processCSV = (event) => {
                 const { data: works } = await supabase
                     .from('works')
                     .select('id')
-                    .ilike('title', title)
+                    .ilike('title', '%' + title + '%')
                     .limit(1);
 
                 if (!works || works.length === 0) {
