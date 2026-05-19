@@ -70,7 +70,7 @@ async function loadSubmissions() {
     const fullList = document.getElementById('full-submissions-list');
 
     if (error || !submissions || submissions.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="3" class="px-6 py-10 text-center text-slate-500">No submissions found.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-500">No submissions found.</td></tr>';
         fullList.innerHTML = '<p class="text-slate-500">You haven\'t submitted any interpretations yet.</p>';
         return;
     }
@@ -83,18 +83,28 @@ async function loadSubmissions() {
             <td class="px-6 py-4">
                 <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
             </td>
+            <td class="px-6 py-4 text-right">
+                <button onclick="deletePerformance(${s.id})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-2 rounded-xl transition-all flex items-center justify-center ml-auto">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                </button>
+            </td>
         </tr>
     `).join('');
 
     // Render full cards
     fullList.innerHTML = submissions.map(s => `
-        <div class="glass-panel p-6 rounded-3xl space-y-3">
+        <div class="glass-panel p-6 rounded-3xl space-y-3 relative group">
             <div class="flex justify-between items-start">
                 <div>
                     <h4 class="font-bold text-white">${s.work?.title || 'Unknown Work'}</h4>
                     <p class="text-xs text-slate-500">Composer: ${s.work?.composer?.name || 'Unknown'}</p>
                 </div>
-                <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
+                <div class="flex items-center gap-2">
+                    <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
+                    <button onclick="deletePerformance(${s.id})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-1.5 rounded-lg transition-all">
+                        <span class="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                </div>
             </div>
             <div class="pt-2 flex justify-between">
                 <div>
@@ -376,5 +386,22 @@ function showSection(sectionId) {
 window.showSection = showSection;
 window.openSubmissionModal = () => document.getElementById('submission-modal').classList.remove('hidden', 'flex') || document.getElementById('submission-modal').classList.add('flex');
 window.closeSubmissionModal = () => document.getElementById('submission-modal').classList.add('hidden') || document.getElementById('submission-modal').classList.remove('flex');
+
+window.deletePerformance = async (id) => {
+    if (!confirm("Are you sure you want to delete this interpretation?")) return;
+    
+    const { error } = await supabase
+        .from('performances')
+        .delete()
+        .eq('id', id);
+        
+    if (error) {
+        alert("Error deleting interpretation: " + error.message);
+    } else {
+        alert("Interpretation deleted successfully.");
+        await loadStats();
+        await loadSubmissions();
+    }
+};
 
 document.addEventListener('DOMContentLoaded', init);
