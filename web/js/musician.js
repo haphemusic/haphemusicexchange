@@ -189,7 +189,7 @@ window.submitInterpretation = async () => {
             // Create a new work
             const { data: newWork, error: newWorkError } = await supabase
                 .from('works')
-                .insert({ title: searchInput, status: 'unverified' })
+                .insert({ title: searchInput, status: 'pending' })
                 .select('id')
                 .single();
                 
@@ -295,7 +295,7 @@ window.processCSV = (event) => {
                     console.log(`Work not found, creating: ${title}`);
                     const { data: newWork, error: newWorkError } = await supabase
                         .from('works')
-                        .insert({ title: title, status: 'unverified' })
+                        .insert({ title: title, status: 'pending' })
                         .select('id')
                         .single();
                         
