@@ -242,6 +242,10 @@
                 <span class="material-symbols-outlined">forum</span>
                 My Posts & Works
             </a>
+            <a href="#interactions" onclick="showSection('interactions')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all" id="nav-interactions">
+                <span class="material-symbols-outlined">bookmark</span>
+                Saved & Likes
+            </a>
             <a href="profile-composer.html" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">
                 <span class="material-symbols-outlined">person</span>
                 Public Profile
@@ -386,6 +390,32 @@
                             <!-- List of works -->
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- SECTION: INTERACTIONS -->
+            <section id="section-interactions" class="hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Saved & Likes</h2>
+                    <p class="text-sm text-slate-500">View and manage the posts you saved, upvoted, or downvoted across the community archive.</p>
+                </div>
+
+                <!-- Tabs selector -->
+                <div class="flex border-b border-white/10 gap-6">
+                    <button onclick="changeInteractionTab('saved')" id="tab-int-saved" class="pb-3 text-sm font-bold border-b-2 border-salmon text-salmon transition-all">
+                        Saved Posts
+                    </button>
+                    <button onclick="changeInteractionTab('upvoted')" id="tab-int-upvoted" class="pb-3 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-white transition-all">
+                        Upvoted
+                    </button>
+                    <button onclick="changeInteractionTab('downvoted')" id="tab-int-downvoted" class="pb-3 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-white transition-all">
+                        Downvoted
+                    </button>
+                </div>
+
+                <!-- Interactions list container -->
+                <div id="interactions-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic posts list -->
                 </div>
             </section>
 

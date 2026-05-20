@@ -304,6 +304,9 @@ function showSection(sectionId) {
     const section = document.getElementById('section-' + sectionId);
     if (section) {
         section.classList.remove('hidden');
+        if (sectionId === 'interactions') {
+            window.changeInteractionTab('saved');
+        }
         const nav = document.getElementById('nav-' + sectionId);
         if (nav) {
             nav.classList.add('sidebar-item-active', 'text-white');
@@ -627,3 +630,122 @@ window.handleExcelUpload = async (event) => {
     };
     reader.readAsArrayBuffer(file);
 };
+
+// ── Saved & Likes Dashboard Section ───────────────────────────────
+let activeTab = 'saved';
+window.activeInteractionTab = activeTab;
+
+async function changeInteractionTab(tabType) {
+    activeTab = tabType;
+    window.activeInteractionTab = tabType;
+    
+    const tabs = ['saved', 'upvoted', 'downvoted'];
+    tabs.forEach(t => {
+        const btn = document.getElementById('tab-int-' + t);
+        if (btn) {
+            if (t === tabType) {
+                btn.classList.add('border-salmon', 'text-salmon');
+                btn.classList.remove('border-transparent', 'text-slate-400');
+            } else {
+                btn.classList.remove('border-salmon', 'text-salmon');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            }
+        }
+    });
+    await loadInteractions(tabType);
+}
+window.changeInteractionTab = changeInteractionTab;
+
+async function loadInteractions(tabType = 'saved') {
+    const listContainer = document.getElementById('interactions-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `
+        <div class="col-span-full flex justify-center items-center py-12">
+            <span class="material-symbols-outlined text-3xl animate-spin text-salmon">sync</span>
+        </div>
+    `;
+
+    try {
+        let postIds = [];
+        if (tabType === 'saved') {
+            const { data: savedData, error: sError } = await supabase
+                .from('saved_posts')
+                .select('post_id')
+                .eq('user_id', currentUser.id);
+            if (sError) throw sError;
+            postIds = savedData.map(d => d.post_id);
+        } else {
+            const typeVal = tabType === 'upvoted' ? 1 : -1;
+            const { data: voteData, error: vError } = await supabase
+                .from('votes')
+                .select('post_id')
+                .eq('user_id', currentUser.id)
+                .eq('vote_type', typeVal);
+            if (vError) throw vError;
+            postIds = voteData.map(d => d.post_id);
+        }
+
+        if (postIds.length === 0) {
+            listContainer.innerHTML = `
+                <div class="col-span-full text-center py-16 bg-white/5 rounded-2xl border border-white/5">
+                    <span class="material-symbols-outlined text-4xl text-slate-600 mb-2">bookmark_border</span>
+                    <p class="text-sm text-slate-400 font-sans">No posts found in this category.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Fetch post details
+        const { data: posts, error: pError } = await supabase
+            .from('posts')
+            .select('*')
+            .in('id', postIds)
+            .order('created_at', { ascending: false });
+
+        if (pError) throw pError;
+
+        if (!posts || posts.length === 0) {
+            listContainer.innerHTML = `
+                <div class="col-span-full text-center py-16 bg-white/5 rounded-2xl border border-white/5">
+                    <span class="material-symbols-outlined text-4xl text-slate-600 mb-2">bookmark_border</span>
+                    <p class="text-sm text-slate-400 font-sans">No posts found.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Fetch author names to display in cards
+        const authorIds = [...new Set(posts.map(p => p.author_id))];
+        const { data: profiles, error: prError } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .in('id', authorIds);
+
+        listContainer.innerHTML = posts.map(p => {
+            const author = profiles ? profiles.find(pr => pr.id === p.author_id) : null;
+            const authorName = author ? `${author.first_name || ''} ${author.last_name || ''}`.trim() : 'Anonymous';
+            const dateStr = new Date(p.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+
+            return `
+                <a href="index.html?post=${p.id}&from=composer" class="block feed-card p-5 rounded-2xl transition-all duration-300 relative group border border-white/5 hover:border-salmon/30 bg-white/5">
+                    <div class="flex items-center gap-2 text-[10px] text-slate-400 mb-2 font-sans">
+                        <span class="font-bold text-white hover:underline">${authorName}</span>
+                        <span>•</span>
+                        <span class="font-mono">${dateStr}</span>
+                    </div>
+                    <h3 class="text-sm font-bold text-white group-hover:text-salmon transition-colors mb-1.5 line-clamp-1 font-headline-md">${p.title}</h3>
+                    <p class="text-xs text-slate-300 line-clamp-2 font-sans">${p.content}</p>
+                    <div class="absolute right-4 bottom-4 text-salmon opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                    </div>
+                </a>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading interactions:", err);
+        listContainer.innerHTML = `<p class="col-span-full text-center text-rose-400 text-xs font-sans py-10">Error loading interaction list.</p>`;
+    }
+}
+window.loadInteractions = loadInteractions;
