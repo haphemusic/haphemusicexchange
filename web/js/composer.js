@@ -47,10 +47,10 @@ async function loadStats() {
         .eq('status', 'validated');
 
     const { count: pendingCount } = await supabase
-        .from('works')
-        .select('*', { count: 'exact', head: true })
-        .eq('submitted_by', currentUser.id)
-        .eq('status', 'pending');
+        .from('performances')
+        .select('*, work:work_id!inner(submitted_by)', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .eq('work.submitted_by', currentUser.id);
 
     document.getElementById('stat-works').textContent = worksCount || 0;
     document.getElementById('stat-pending').textContent = pendingCount || 0;
@@ -67,27 +67,34 @@ async function loadStats() {
 async function loadValidations() {
     const container = document.getElementById('validations-list');
     const { data: validations, error } = await supabase
-        .from('works')
+        .from('performances')
         .select(`
             *,
-            profiles:submitted_by (first_name, last_name, role)
+            performer:performer_id (first_name, last_name, role),
+            work:work_id!inner (title, submitted_by)
         `)
-        .eq('submitted_by', currentUser.id)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .eq('work.submitted_by', currentUser.id);
 
     if (error || !validations || validations.length === 0) {
         container.innerHTML = '<p class="text-sm text-slate-500 py-10 text-center">No pending validation requests.</p>';
         return;
     }
 
-    container.innerHTML = validations.map(v => `
+    container.innerHTML = validations.map(v => {
+        const performerName = v.performer 
+            ? `${v.performer.first_name || ''} ${v.performer.last_name || ''}`.trim() || 'Performer'
+            : 'Unknown Performer';
+        const performerRole = v.performer?.role || 'musician';
+        return `
         <div class="glass-panel p-6 rounded-3xl flex items-center gap-6 group hover:border-salmon/30 transition-all">
             <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center">
                 <span class="material-symbols-outlined text-slate-500">groups</span>
             </div>
             <div class="flex-1">
-                <h4 class="font-bold text-white">${v.title}</h4>
-                <p class="text-xs text-slate-400">Performed by: ${v.profiles.first_name} ${v.profiles.last_name} (${v.profiles.role})</p>
+                <h4 class="font-bold text-white">${v.work?.title || 'Unknown Work'}</h4>
+                <p class="text-xs text-slate-400">Performed by: ${performerName} (${performerRole})</p>
+                <p class="text-[10px] text-slate-500 mt-1">Date: ${v.performance_date || 'N/A'} • Venue: ${v.venue || 'N/A'}, ${v.city || 'N/A'}</p>
             </div>
             <div class="flex gap-2">
                 <button onclick="handleValidation(${v.id}, 'rejected')" class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 transition-all">
@@ -98,14 +105,15 @@ async function loadValidations() {
                 </button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
-async function handleValidation(workId, newStatus) {
+async function handleValidation(performanceId, newStatus) {
     const { error } = await supabase
-        .from('works')
+        .from('performances')
         .update({ status: newStatus })
-        .eq('id', workId);
+        .eq('id', performanceId);
 
     if (error) {
         alert("Error updating status: " + error.message);
@@ -115,6 +123,7 @@ async function handleValidation(workId, newStatus) {
         await loadMyWorks();
     }
 }
+window.handleValidation = handleValidation;
 
 async function loadMyWorks() {
     const container = document.getElementById('my-works-list');

@@ -60,7 +60,8 @@ async function loadSubmissions() {
             *,
             work:work_id (
                 title,
-                composer:composer_id (name)
+                composer:composer_id (name),
+                profiles:submitted_by (first_name, last_name)
             )
         `)
         .eq('performer_id', currentUser.id)
@@ -75,11 +76,20 @@ async function loadSubmissions() {
         return;
     }
 
+    const getComposerName = (work) => {
+        if (!work) return 'Unknown';
+        if (work.composer?.name) return work.composer.name;
+        if (work.profiles) {
+            return `${work.profiles.first_name || ''} ${work.profiles.last_name || ''}`.trim() || 'Unknown';
+        }
+        return 'Unknown';
+    };
+
     // Render table (Top 5)
     tableBody.innerHTML = submissions.slice(0, 5).map(s => `
         <tr class="hover:bg-white/2 transition-colors">
             <td class="px-6 py-4 font-bold text-white text-sm">${s.work?.title || 'Unknown Work'}</td>
-            <td class="px-6 py-4 text-slate-400 text-sm">${s.work?.composer?.name || 'Unknown'}</td>
+            <td class="px-6 py-4 text-slate-400 text-sm">${getComposerName(s.work)}</td>
             <td class="px-6 py-4">
                 <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
             </td>
@@ -97,7 +107,7 @@ async function loadSubmissions() {
             <div class="flex justify-between items-start">
                 <div>
                     <h4 class="font-bold text-white">${s.work?.title || 'Unknown Work'}</h4>
-                    <p class="text-xs text-slate-500">Composer: ${s.work?.composer?.name || 'Unknown'}</p>
+                    <p class="text-xs text-slate-500">Composer: ${getComposerName(s.work)}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
