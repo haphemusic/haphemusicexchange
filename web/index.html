@@ -102,6 +102,110 @@
             from { opacity: 0; transform: scale(0.9); }
             to { opacity: 1; transform: scale(1); }
         }
+
+        /* ── Work Cards ────────────────────────────────────────── */
+        .work-card {
+            background: rgba(13, 28, 45, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 24px;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .work-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(229,115,115,0.35);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+        }
+        .work-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .badge-electronics { background: rgba(99,179,237,0.15); color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
+        .badge-solo        { background: rgba(154,205,144,0.15); color: #9ACD90; border: 1px solid rgba(154,205,144,0.3); }
+        .badge-duo         { background: rgba(183,148,244,0.15); color: #b794f4; border: 1px solid rgba(183,148,244,0.3); }
+        .badge-trio        { background: rgba(183,148,244,0.15); color: #b794f4; border: 1px solid rgba(183,148,244,0.3); }
+        .badge-chamber     { background: rgba(246,173,85,0.15);  color: #f6ad55; border: 1px solid rgba(246,173,85,0.3); }
+        .badge-ensemble    { background: rgba(246,173,85,0.15);  color: #f6ad55; border: 1px solid rgba(246,173,85,0.3); }
+        .badge-orchestra   { background: rgba(229,115,115,0.15); color: #E57373; border: 1px solid rgba(229,115,115,0.3); }
+        .badge-other       { background: rgba(160,174,192,0.15); color: #a0aec0; border: 1px solid rgba(160,174,192,0.3); }
+
+        .badge-diff-easy         { background: rgba(154,205,144,0.12); color: #9ACD90; }
+        .badge-diff-medium       { background: rgba(246,173,85,0.12);  color: #f6ad55; }
+        .badge-diff-hard         { background: rgba(229,115,115,0.12); color: #E57373; }
+        .badge-diff-student      { background: rgba(154,205,144,0.12); color: #9ACD90; }
+        .badge-diff-advanced     { background: rgba(246,173,85,0.12);  color: #f6ad55; }
+        .badge-diff-professional { background: rgba(229,115,115,0.12); color: #E57373; }
+
+        /* ── Modal ────────────────────────────────────────────────── */
+        #work-modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        #work-modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease-out; }
+        #work-modal {
+            background: #0d1c2d;
+            border: 1px solid rgba(229,115,115,0.25);
+            border-radius: 24px;
+            max-width: 680px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 36px;
+            position: relative;
+            animation: slideDown 0.25s ease-out;
+        }
+        #work-modal::-webkit-scrollbar { width: 4px; }
+        #work-modal::-webkit-scrollbar-thumb { background: rgba(229,115,115,0.3); border-radius: 4px; }
+        .modal-section-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(212,228,250,0.4);
+            margin: 24px 0 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding-bottom: 6px;
+        }
+        .modal-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-size: 13px;
+        }
+        .modal-label {
+            color: #8b96ac;
+            font-weight: 500;
+        }
+        .modal-value {
+            color: #fff;
+            text-align: right;
+            max-width: 65%;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="bg-surface-container-lowest text-on-surface font-body-md selection:bg-salmon selection:text-white">
@@ -485,6 +589,8 @@
     const countries = ["Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Korea, North", "Korea, South", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"];
 
     let instrumentData = {};
+    let currentUserId = null;
+    let workVotes = [];
 
     async function loadInstruments() {
         const { data } = await supabase.from('instruments').select('*');
@@ -538,6 +644,22 @@
     };
 
     window.filterWorks = async () => {
+        // Fetch session
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            currentUserId = session ? session.user.id : null;
+        } catch (e) {
+            currentUserId = null;
+        }
+
+        // Fetch work votes
+        try {
+            const { data: wvData } = await supabase.from('work_votes').select('*');
+            workVotes = wvData || [];
+        } catch (e) {
+            workVotes = [];
+        }
+
         const yf = parseInt(document.getElementById('year-from').value) || 0;
         const yt = parseInt(document.getElementById('year-to').value) || 9999;
         const co = document.getElementById('country-select').value;
@@ -552,6 +674,25 @@
         if (error) {
             console.error("Error fetching works:", error);
             return;
+        }
+
+        // Get active instrument tags from the DOM
+        const tagsContainer = document.getElementById('tags-container');
+        const activeTags = Array.from(tagsContainer ? tagsContainer.querySelectorAll('.tag-item') : []).map(el => 
+            el.textContent.replace('×', '').trim().toLowerCase()
+        );
+
+        // Update dropdown label text dynamically
+        const selText = document.getElementById('selected-instrument-text');
+        if (selText) {
+            if (activeTags.length === 0) {
+                selText.textContent = "Browse Instruments...";
+            } else if (activeTags.length === 1) {
+                const firstTag = tagsContainer.querySelector('.tag-item');
+                selText.textContent = firstTag ? firstTag.textContent.replace('×', '').trim() : "Browse Instruments...";
+            } else {
+                selText.textContent = `${activeTags.length} Instruments Selected`;
+            }
         }
 
         const filtered = (works || []).filter(w => {
@@ -577,12 +718,19 @@
                 if (!matchComposer && !matchSubmitter) return false;
             }
 
-            // Instrument tag filter
-            const selectedInst = document.getElementById('selected-instrument-text')?.textContent;
-            if (selectedInst && selectedInst !== 'Select Instrument') {
-                const hasInstrument = w.work_instruments?.some(wi => 
-                    wi.instruments?.name?.toLowerCase() === selectedInst.toLowerCase()
-                );
+            // Instrument tag filter (match any of the selected instruments)
+            if (activeTags.length > 0) {
+                const hasInstrument = w.work_instruments?.some(wi => {
+                    const instName = wi.instruments?.name?.toLowerCase();
+                    const instVariant = wi.instruments?.variant?.toLowerCase();
+                    const instFamily = wi.instruments?.family?.toLowerCase();
+                    return activeTags.some(tag => 
+                        (instName && instName.includes(tag)) || 
+                        (instVariant && instVariant.includes(tag)) ||
+                        (instFamily && instFamily.includes(tag)) ||
+                        tag.includes(instName || '')
+                    );
+                });
                 if (!hasInstrument) return false;
             }
 
@@ -609,60 +757,74 @@
                 || (w.submitter ? `${w.submitter.first_name || ''} ${w.submitter.last_name || ''}`.trim() : '')
                 || 'Unknown Composer';
                 
-            const country = w.composer?.nationality 
+            const location = w.composer?.nationality 
                 || w.submitter?.residence_country 
                 || w.submitter?.nationality 
-                || '—';
+                || '';
                 
-            const yearStr = w.year || '—';
-            
-            // CURATED PREMIUM FALLBACK IMAGES
-            let imgUrl = 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?auto=format&fit=crop&w=600&q=80';
-            if (w.has_electronics) {
-                imgUrl = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80';
-            } else if (w.scoring_category === 'solo') {
-                imgUrl = 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&w=600&q=80';
-            } else if (w.scoring_category === 'orchestra' || w.scoring_category === 'ensemble') {
-                imgUrl = 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80';
-            }
-
-            const wData = encodeURIComponent(JSON.stringify(w));
             const insts = w.work_instruments?.map(wi => wi.instruments).filter(Boolean) || [];
-            const instData = encodeURIComponent(JSON.stringify(insts));
+            const instruments = insts.map(i => i.name).filter(Boolean).join(', ');
             
-            const tagsHTML = (w.style_tags || []).slice(0, 2).map(t => 
-                `<span class="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-slate-300 font-sans">${t}</span>`
+            const stylePills = (w.style_tags || []).slice(0,3).map(t =>
+                `<span style="background:rgba(229,115,115,0.12);color:#E57373;border:1px solid rgba(229,115,115,0.2);padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600">${t}</span>`
             ).join('');
-
+            
+            const duration = w.duration_minutes ? `<span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;margin-right:2px">schedule</span>${w.duration_minutes} min` : '';
+            const elec = w.has_electronics ? `<span class="work-badge badge-electronics"><span class="material-symbols-outlined" style="font-size:11px">bolt</span>Electronics</span>` : '';
+            
+            const wData = encodeURIComponent(JSON.stringify(w)).replace(/'/g, "%27");
+            const instData = encodeURIComponent(JSON.stringify(insts)).replace(/'/g, "%27");
+            
+            // Calculate vote score for this work
+            const votesForWork = workVotes.filter(v => v.work_id === w.id);
+            const score = votesForWork.reduce((acc, curr) => acc + curr.vote_type, 0);
+            const userVote = currentUserId ? votesForWork.find(v => v.user_id === currentUserId) : null;
+            const userVoteType = userVote ? userVote.vote_type : 0;
+            
             return `
-                <div onclick="window.openWorkModal('${wData}', '${instData}')" class="work-card glass-panel p-4 rounded-2xl group cursor-pointer hover:bg-white/5 transition-all duration-500">
-                    <div class="relative mb-4 overflow-hidden rounded-xl aspect-[4/3]">
-                        <img alt="${w.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="${imgUrl}"/>
-                        <div class="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 border border-white/10">
-                            <span class="material-symbols-outlined text-rose-400 text-[14px]" style="font-variation-settings: 'FILL' 1;">verified</span>
-                            <span class="text-[10px] font-semibold text-white">VALIDATED</span>
-                        </div>
-                        ${w.has_electronics ? `
-                        <div class="absolute top-3 right-3 bg-rose-500/90 backdrop-blur-md px-2 py-1 rounded text-[9px] font-bold text-white font-mono uppercase tracking-wider">
-                            Electronic
-                        </div>
-                        ` : ''}
+            <div class="work-card" onclick="window.openWorkModal('${wData}','${instData}')">
+                <!-- Top badges & Vote -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        ${scoringBadge(w.scoring_category)}
+                        ${diffBadge(w.technical_difficulty)}
+                        ${elec}
                     </div>
-                    <div class="space-y-1">
-                        <div class="flex justify-between items-start gap-2">
-                            <h3 class="text-lg font-medium text-white group-hover:text-salmon transition-colors line-clamp-1">${w.title}</h3>
-                            <span class="text-xs font-mono text-slate-500 shrink-0">${yearStr}</span>
-                        </div>
-                        <p class="text-slate-300 text-sm font-sans line-clamp-1">${composerName}</p>
-                        <div class="flex justify-between items-center pt-2">
-                            <span class="text-xs text-slate-500 font-sans uppercase tracking-wider">${country}</span>
-                            <div class="flex gap-1">
-                                ${tagsHTML}
-                            </div>
-                        </div>
+                    <!-- Voting Widget -->
+                    <div style="display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">
+                        <button onclick="window.handleWorkVote(${w.id}, 1)" style="background:none;border:none;padding:2px;cursor:pointer;color:${userVoteType === 1 ? '#E57373' : '#8b96ac'};display:flex;align-items:center;transition:color 0.2s" class="hover:text-salmon">
+                            <span class="material-symbols-outlined" style="font-size:16px">arrow_upward</span>
+                        </button>
+                        <span style="font-size:11px;font-weight:bold;color:${score > 0 ? '#E57373' : score < 0 ? '#63b3ed' : '#8b96ac'};min-width:12px;text-align:center">${score}</span>
+                        <button onclick="window.handleWorkVote(${w.id}, -1)" style="background:none;border:none;padding:2px;cursor:pointer;color:${userVoteType === -1 ? '#63b3ed' : '#8b96ac'};display:flex;align-items:center;transition:color 0.2s" class="hover:text-cyan-400">
+                            <span class="material-symbols-outlined" style="font-size:16px">arrow_downward</span>
+                        </button>
                     </div>
                 </div>
-            `;
+
+                <!-- Title & Composer -->
+                <h3 style="color:#fff;font-size:16px;font-weight:600;line-height:1.3;margin-bottom:4px">${w.title}${w.subtitle ? `<span style='color:rgba(212,228,250,0.45);font-weight:400;font-size:13px'> — ${w.subtitle}</span>` : ''}</h3>
+                <p style="color:#8b96ac;font-size:13px;margin-bottom:12px">${composerName}</p>
+
+                <!-- Instruments -->
+                <p style="color:#a0aec0;font-size:12px;margin-bottom:12px;min-height:18px">
+                    <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;margin-right:4px">piano</span>${instruments || w.performer_combination || 'Instrumentation not specified'}
+                </p>
+
+                <!-- Style tags -->
+                ${stylePills ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">${stylePills}</div>` : ''}
+
+                <!-- Divider -->
+                <div style="border-top:1px solid rgba(255,255,255,0.06);margin-bottom:12px"></div>
+
+                <!-- Footer: country | year | duration -->
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#E57373;font-size:11px;font-weight:600;letter-spacing:0.06em">
+                        ${[location, w.year].filter(Boolean).join(' · ')}
+                    </span>
+                    <span style="color:#8b96ac;font-size:11px;display:flex;align-items:center;gap:3px">${duration}</span>
+                </div>
+            </div>`;
         }).join('');
     }
 
@@ -674,6 +836,19 @@
         loadInstruments();
         filterWorks();
     };
+
+    // ── Badge Helpers ──────────────────────────────────────────
+    function scoringBadge(cat) {
+        if (!cat) return '';
+        const cls = `badge-${cat.toLowerCase()}`;
+        const icons = { solo:'person', duo:'group', trio:'groups', chamber:'piano', ensemble:'queue_music', orchestra:'library_music', other:'music_note' };
+        const icon = icons[cat.toLowerCase()] || 'music_note';
+        return `<span class="work-badge ${cls}"><span class="material-symbols-outlined" style="font-size:11px">${icon}</span>${cat}</span>`;
+    }
+    function diffBadge(d) {
+        if (!d) return '';
+        return `<span class="work-badge badge-diff-${d.toLowerCase()}">${d}</span>`;
+    }
 
     // ── Work Detail Modal ──────────────────────────────────────────
     window.openWorkModal = (wEncoded, instEncoded) => {
@@ -693,16 +868,34 @@
             `<span class="work-badge" style="background:rgba(229,115,115,0.12);color:#E57373;border:1px solid rgba(229,115,115,0.2)">${t}</span>`
         ).join('');
 
+        // Calculate vote score for this work
+        const votesForWork = workVotes.filter(v => v.work_id === w.id);
+        const score = votesForWork.reduce((acc, curr) => acc + curr.vote_type, 0);
+        const userVote = currentUserId ? votesForWork.find(v => v.user_id === currentUserId) : null;
+        const userVoteType = userVote ? userVote.vote_type : 0;
+
         document.getElementById('work-modal').innerHTML = `
             <!-- Close -->
             <button onclick="window.closeWorkModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.06);border:none;color:#d4e4fa;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">
                 <span class="material-symbols-outlined">close</span>
             </button>
 
-            <!-- Header -->
-            <div style="margin-bottom:4px;display:flex;flex-wrap:wrap;gap:6px">
-                ${scoringBadge(w.scoring_category)} ${diffBadge(w.technical_difficulty)}
-                ${w.has_electronics ? '<span class="work-badge badge-electronics"><span class="material-symbols-outlined" style="font-size:11px">bolt</span>Electronics</span>' : ''}
+            <!-- Header & Vote -->
+            <div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;padding-right:45px">
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    ${scoringBadge(w.scoring_category)} ${diffBadge(w.technical_difficulty)}
+                    ${w.has_electronics ? '<span class="work-badge badge-electronics"><span class="material-symbols-outlined" style="font-size:11px">bolt</span>Electronics</span>' : ''}
+                </div>
+                <!-- Voting Widget -->
+                <div style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">
+                    <button onclick="window.handleWorkVote(${w.id}, 1)" style="background:rgba(255,255,255,0.06);border:none;color:${userVoteType === 1 ? '#E57373' : '#8b96ac'};width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color 0.2s" class="hover:text-salmon">
+                        <span class="material-symbols-outlined" style="font-size:18px">arrow_upward</span>
+                    </button>
+                    <span style="font-size:14px;font-weight:bold;color:${score > 0 ? '#E57373' : score < 0 ? '#63b3ed' : '#8b96ac'};min-width:16px;text-align:center">${score}</span>
+                    <button onclick="window.handleWorkVote(${w.id}, -1)" style="background:rgba(255,255,255,0.06);border:none;color:${userVoteType === -1 ? '#63b3ed' : '#8b96ac'};width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color 0.2s" class="hover:text-cyan-400">
+                        <span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span>
+                    </button>
+                </div>
             </div>
             <h2 style="color:#fff;font-size:24px;font-weight:700;margin:12px 0 4px;line-height:1.2">${w.title}</h2>
             ${w.subtitle ? `<p style="color:#8b96ac;font-size:14px;margin-bottom:4px">${w.subtitle}</p>` : ''}
@@ -936,7 +1129,8 @@
                         technical_difficulty, space_requirements, additional_info,
                         status, created_at,
                         composer:composer_id(name, nationality, period),
-                        submitter:submitted_by(first_name, last_name)
+                        submitter:submitted_by(first_name, last_name),
+                        work_instruments(*, instruments(*))
                     `)
                     .or(`composer_id.eq.${userId},submitted_by.eq.${userId}`)
                     .eq('status', 'validated')
@@ -946,8 +1140,9 @@
                     contributionHTML = `
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             ${works.map(w => {
-                                const wData = encodeURIComponent(JSON.stringify(w));
-                                const instData = encodeURIComponent(JSON.stringify(workInstrumentsMap[w.id] || []));
+                                const wData = encodeURIComponent(JSON.stringify(w)).replace(/'/g, "%27");
+                                const insts = w.work_instruments?.map(wi => wi.instruments).filter(Boolean) || [];
+                                const instData = encodeURIComponent(JSON.stringify(insts)).replace(/'/g, "%27");
                                 return `
                                     <div onclick="window.openWorkModal('${wData}', '${instData}'); window.closeUserProfile();" class="p-4 bg-white/2 hover:bg-white/5 border border-white/5 rounded-2xl cursor-pointer hover:border-salmon/20 transition-all flex flex-col justify-between">
                                         <div>
@@ -2077,6 +2272,78 @@
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = originalHTML;
             }
+        }
+    };
+    window.handleWorkVote = async (workId, voteValue) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert("Por favor, inicia sesión para votar en las obras.");
+            window.location.href = 'login.html';
+            return;
+        }
+        const currentUserId = session.user.id;
+
+        try {
+            // Check if there is an existing vote
+            const { data: existingVote, error: selectError } = await supabase
+                .from('work_votes')
+                .select('*')
+                .eq('work_id', workId)
+                .eq('user_id', currentUserId)
+                .maybeSingle();
+
+            if (selectError) throw selectError;
+
+            if (existingVote) {
+                if (existingVote.vote_type === voteValue) {
+                    // Remove the vote if clicked same direction (toggle off)
+                    const { error: deleteError } = await supabase
+                        .from('work_votes')
+                        .delete()
+                        .eq('id', existingVote.id);
+                    if (deleteError) throw deleteError;
+                } else {
+                    // Update the vote type if clicked different direction
+                    const { error: updateError } = await supabase
+                        .from('work_votes')
+                        .update({ vote_type: voteValue })
+                        .eq('id', existingVote.id);
+                    if (updateError) throw updateError;
+                }
+            } else {
+                // Insert a new vote
+                const { error: insertError } = await supabase
+                    .from('work_votes')
+                    .insert({
+                        work_id: workId,
+                        user_id: currentUserId,
+                        vote_type: voteValue
+                    });
+                if (insertError) throw insertError;
+            }
+
+            // Refresh works grid
+            await filterWorks();
+
+            // If the work detail modal is currently open for this work, we should update it
+            const workBackdrop = document.getElementById('work-modal-backdrop');
+            if (workBackdrop && workBackdrop.classList.contains('open')) {
+                // Fetch the updated work data
+                const { data: updatedWork } = await supabase
+                    .from('works')
+                    .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instruments(*))')
+                    .eq('id', workId)
+                    .single();
+                if (updatedWork) {
+                    const insts = updatedWork.work_instruments?.map(wi => wi.instruments).filter(Boolean) || [];
+                    const wData = encodeURIComponent(JSON.stringify(updatedWork)).replace(/'/g, "%27");
+                    const instData = encodeURIComponent(JSON.stringify(insts)).replace(/'/g, "%27");
+                    window.openWorkModal(wData, instData);
+                }
+            }
+        } catch (error) {
+            console.error("Error voting on work:", error);
+            alert("No se pudo procesar tu voto: " + error.message);
         }
     };
 
