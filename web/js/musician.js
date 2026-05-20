@@ -188,6 +188,136 @@ window.submitInterpretation = async () => {
         await loadSubmissions();
     }
 };
+window.toggleExcelImportPanel = () => {
+    const panel = document.getElementById('excel-import-panel');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+};
+
+window.processCSV = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('csv-import-status');
+    statusEl.style.display = 'flex';
+    statusEl.innerHTML = `<span class="material-symbols-outlined text-[16px] animate-spin">sync</span> <span>Processing spreadsheet...</span>`;
+    statusEl.style.color = '#d4e4fa';
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Convert sheet to JSON array of objects
+            const rows = XLSX.utils.sheet_to_json(worksheet);
+            if (!rows || rows.length === 0) {
+                statusEl.innerHTML = `<span class="material-symbols-outlined text-[16px] text-rose-400">error</span> <span>The file seems to be empty.</span>`;
+                statusEl.style.color = '#E57373';
+                return;
+            }
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const row of rows) {
+                // Find work_id by title
+                const title = row['Work Title'] || row['Title'] || row['work_title'] || row['Work'];
+                if (!title) { failCount++; continue; }
+
+                let workId;
+                const { data: works } = await supabase
+                    .from('works')
+                    .select('id')
+                    .ilike('title', '%' + title + '%')
+                    .limit(1);
+
+                if (!works || works.length === 0) {
+                    console.log(`Work not found, creating: ${title}`);
+                    const { data: newWork, error: newWorkError } = await supabase
+                        .from('works')
+                        .insert({ title: title, status: 'pending' })
+                        .select('id')
+                        .single();
+
+                    if (newWorkError || !newWork) {
+                        console.error(`Failed to create work ${title}:`, newWorkError);
+                        failCount++;
+                        continue;
+                    }
+                    workId = newWork.id;
+                } else {
+                    workId = works[0].id;
+                }
+
+                // Format date if needed, basic check
+                let perfDate = row['Performance Date'] || row['Date'] || row['performance_date'];
+                if (perfDate) {
+                    perfDate = perfDate.toString().trim();
+                    if (perfDate.includes('/')) {
+                        // Try to convert DD/MM/YYYY to YYYY-MM-DD
+                        const parts = perfDate.split('/');
+                        if (parts.length === 3 && parts[2].length === 4) {
+                            perfDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        }
+                    }
+                }
+
+                const { error } = await supabase
+                    .from('performances')
+                    .insert({
+                        work_id: workId,
+                        performer_id: currentUser.id,
+                        performance_date: perfDate || null,
+                        event_name: row['Event / Festival Name'] || row['Event'] || row['event_name'] || null,
+                        venue: row['Venue'] || row['venue'] || null,
+                        city: row['City'] || row['city'] || null,
+                        country: row['Country'] || row['country'] || null,
+                        premiere_status: row['Premiere Status'] || row['premiere_status'] || 'Standard Performance',
+                        ensemble_name: row['Ensemble / Soloist Name'] || row['Ensemble'] || row['ensemble_name'] || null,
+                        conductor: row['Conductor'] || row['conductor'] || null,
+                        recording_link: row['Live Recording Link'] || row['Link'] || row['recording_link'] || null,
+                        photo_link: row['Photo / Poster'] || row['photo_link'] || null,
+                        program_notes: row['Program Notes (Used)'] || row['Notes'] || row['program_notes'] || null,
+                        performance_note: row['Performance Note'] || row['Feedback'] || row['performance_note'] || null,
+                        status: 'pending'
+                    });
+
+                if (error) {
+                    console.error("Error inserting:", error);
+                    failCount++;
+                } else {
+                    successCount++;
+                }
+            }
+
+            statusEl.innerHTML = `<span class="material-symbols-outlined text-[16px]">check_circle</span> <span>Parsed successfully! Imported ${successCount}, ${failCount} failed.</span>`;
+            statusEl.style.color = '#9ACD90';
+            statusEl.style.display = 'flex';
+
+            await loadStats();
+            await loadSubmissions();
+
+            // Reset input
+            event.target.value = '';
+
+            // Automatically close the panel and modal after a small delay
+            setTimeout(() => {
+                document.getElementById('excel-import-panel').style.display = 'none';
+                statusEl.style.display = 'none';
+                window.closeSubmissionModal();
+            }, 3000);
+
+        } catch (err) {
+            console.error("Error reading file:", err);
+            statusEl.innerHTML = `<span class="material-symbols-outlined text-[16px] text-rose-400">error</span> <span>Error parsing spreadsheet.</span>`;
+            statusEl.style.color = '#E57373';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+};
 
 function showSection(sectionId) {
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
@@ -197,6 +327,9 @@ function showSection(sectionId) {
     const section = document.getElementById('section-' + sectionId);
     if (section) {
         section.classList.remove('hidden');
+        if (sectionId === 'interactions') {
+            window.changeInteractionTab('saved');
+        }
         const nav = document.getElementById('nav-' + sectionId);
         if (nav) {
             nav.classList.add('sidebar-item-active', 'text-white');
@@ -208,5 +341,139 @@ function showSection(sectionId) {
 window.showSection = showSection;
 window.openSubmissionModal = () => document.getElementById('submission-modal').classList.remove('hidden', 'flex') || document.getElementById('submission-modal').classList.add('flex');
 window.closeSubmissionModal = () => document.getElementById('submission-modal').classList.add('hidden') || document.getElementById('submission-modal').classList.remove('flex');
+window.deletePerformance = async (id) => {
+    if (!confirm("Are you sure you want to delete this interpretation?")) return;
 
+    const { error } = await supabase
+        .from('performances')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        alert("Error deleting interpretation: " + error.message);
+    } else {
+        alert("Interpretation deleted successfully.");
+        await loadStats();
+        await loadSubmissions();
+    }
+};
+
+// ── Saved & Likes Dashboard Section ───────────────────────────────
+let activeTab = 'saved';
+window.activeInteractionTab = activeTab;
+
+async function changeInteractionTab(tabType) {
+    activeTab = tabType;
+    window.activeInteractionTab = tabType;
+    
+    const tabs = ['saved', 'upvoted', 'downvoted'];
+    tabs.forEach(t => {
+        const btn = document.getElementById('tab-int-' + t);
+        if (btn) {
+            if (t === tabType) {
+                btn.classList.add('border-salmon', 'text-salmon');
+                btn.classList.remove('border-transparent', 'text-slate-400');
+            } else {
+                btn.classList.remove('border-salmon', 'text-salmon');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            }
+        }
+    });
+    await loadInteractions(tabType);
+}
+window.changeInteractionTab = changeInteractionTab;
+
+async function loadInteractions(tabType = 'saved') {
+    const listContainer = document.getElementById('interactions-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `
+        <div class="col-span-full flex justify-center items-center py-12">
+            <span class="material-symbols-outlined text-3xl animate-spin text-salmon">sync</span>
+        </div>
+    `;
+
+    try {
+        let postIds = [];
+        if (tabType === 'saved') {
+            const { data: savedData, error: sError } = await supabase
+                .from('saved_posts')
+                .select('post_id')
+                .eq('user_id', currentUser.id);
+            if (sError) throw sError;
+            postIds = savedData.map(d => d.post_id);
+        } else {
+            const typeVal = tabType === 'upvoted' ? 1 : -1;
+            const { data: voteData, error: vError } = await supabase
+                .from('votes')
+                .select('post_id')
+                .eq('user_id', currentUser.id)
+                .eq('vote_type', typeVal);
+            if (vError) throw vError;
+            postIds = voteData.map(d => d.post_id);
+        }
+
+        if (postIds.length === 0) {
+            listContainer.innerHTML = `
+                <div class="col-span-full text-center py-16 bg-white/5 rounded-2xl border border-white/5">
+                    <span class="material-symbols-outlined text-4xl text-slate-600 mb-2">bookmark_border</span>
+                    <p class="text-sm text-slate-400 font-sans">No posts found in this category.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Fetch post details
+        const { data: posts, error: pError } = await supabase
+            .from('posts')
+            .select('*')
+            .in('id', postIds)
+            .order('created_at', { ascending: false });
+
+        if (pError) throw pError;
+
+        if (!posts || posts.length === 0) {
+            listContainer.innerHTML = `
+                <div class="col-span-full text-center py-16 bg-white/5 rounded-2xl border border-white/5">
+                    <span class="material-symbols-outlined text-4xl text-slate-600 mb-2">bookmark_border</span>
+                    <p class="text-sm text-slate-400 font-sans">No posts found.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Fetch author names to display in cards
+        const authorIds = [...new Set(posts.map(p => p.author_id))];
+        const { data: profiles, error: prError } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .in('id', authorIds);
+
+        listContainer.innerHTML = posts.map(p => {
+            const author = profiles ? profiles.find(pr => pr.id === p.author_id) : null;
+            const authorName = author ? `${author.first_name || ''} ${author.last_name || ''}`.trim() : 'Anonymous';
+            const dateStr = new Date(p.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+
+            return `
+                <a href="index.html?post=${p.id}&from=musician" class="block feed-card p-5 rounded-2xl transition-all duration-300 relative group border border-white/5 hover:border-salmon/30 bg-white/5">
+                    <div class="flex items-center gap-2 text-[10px] text-slate-400 mb-2 font-sans">
+                        <span class="font-bold text-white hover:underline">${authorName}</span>
+                        <span>•</span>
+                        <span class="font-mono">${dateStr}</span>
+                    </div>
+                    <h3 class="text-sm font-bold text-white group-hover:text-salmon transition-colors mb-1.5 line-clamp-1 font-headline-md">${p.title}</h3>
+                    <p class="text-xs text-slate-300 line-clamp-2 font-sans">${p.content}</p>
+                    <div class="absolute right-4 bottom-4 text-salmon opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                    </div>
+                </a>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading interactions:", err);
+        listContainer.innerHTML = `<p class="col-span-full text-center text-rose-400 text-xs font-sans py-10">Error loading interaction list.</p>`;
+    }
+}
+window.loadInteractions = loadInteractions;
 document.addEventListener('DOMContentLoaded', init);
