@@ -230,11 +230,14 @@
 <nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 h-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/10">
     <div class="flex items-center gap-12">
         <a href="index.html" class="text-2xl font-bold tracking-tighter text-white">Contemporánica</a>
-        <div class="hidden md:flex items-center gap-8 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-            <a class="hover:text-salmon transition-colors" href="#about-section">About</a>
-            <a class="hover:text-salmon transition-colors" href="#community-section">Community</a>
-        </div>
     </div>
+
+    <!-- Center Column: Community & About Links -->
+    <div class="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-8 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+        <a class="hover:text-salmon transition-colors" href="#community-section">Community</a>
+        <a class="hover:text-salmon transition-colors" href="#about-section">About</a>
+    </div>
+
     <div class="flex items-center gap-6" id="auth-header">
         <button onclick="window.openUserSearchModal()" class="text-slate-400 hover:text-white transition-all duration-300 active:scale-95 flex items-center">
             <span class="material-symbols-outlined">search</span>
@@ -1726,7 +1729,9 @@
                 
                 if (window.chatOpen) {
                     await window.loadConversations();
-                } else {
+                }
+                
+                if (newMsg.receiver_id === currentUserId) {
                     updateNavbarUnreadBadge(currentUserId);
                 }
             })
