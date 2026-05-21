@@ -612,6 +612,60 @@
 
     const countries = ["Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Korea, North", "Korea, South", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"];
 
+    const countrySynonyms = {
+        "Austria": ["austria", "austrian", "austriaco", "austriaca", "austriaco/a"],
+        "France": ["france", "french", "francés", "francesa", "frances", "frances/a", "francés/a"],
+        "Germany": ["germany", "german", "alemán", "alemana", "aleman", "alemana/a", "alemán/a"],
+        "Spain": ["spain", "spanish", "español", "española", "espanol", "espanola", "español/a"],
+        "Italy": ["italy", "italian", "italiano", "italiana", "italiano/a"],
+        "United States": ["united states", "us", "usa", "american", "estadounidense", "estadounidense/a", "eeuu", "ee.uu."],
+        "United Kingdom": ["united kingdom", "uk", "british", "británico", "británica", "britanico", "britanica", "británico/a", "england", "english", "inglés", "inglesa", "inglés/a"],
+        "Estonia": ["estonia", "estonian", "estonio", "estonia", "estonio/a"],
+        "Hungary": ["hungary", "hungarian", "húngaro", "húngara", "hungaro", "hungara", "húngaro/a"],
+        "Poland": ["poland", "polish", "polaco", "polaca", "polaco/a"],
+        "Finland": ["finland", "finnish", "finlandés", "finlandesa", "finlandes", "finlandés/a"],
+        "Canada": ["canada", "canadian", "canadiense", "canadiense/a"],
+        "Mexico": ["mexico", "mexican", "mexicano", "mexicana", "mexicano/a"],
+        "Argentina": ["argentina", "argentine", "argentinian", "argentino", "argentina", "argentino/a"],
+        "Brazil": ["brazil", "brazilian", "brasileño", "brasileña", "brasileño/a", "brasileno", "brasilena"],
+        "Japan": ["japan", "japanese", "japonés", "japonesa", "japones", "japonés/a"],
+        "China": ["china", "chinese", "chino", "china", "chino/a"],
+        "Russia": ["russia", "russian", "ruso", "rusa", "ruso/a"],
+        "Netherlands": ["netherlands", "dutch", "holandés", "holandesa", "holandes", "neerlandés", "neerlandesa", "holandés/a"],
+        "Sweden": ["sweden", "swedish", "sueco", "sueca", "sueco/a"],
+        "Switzerland": ["switzerland", "swiss", "suizo", "suiza", "suizo/a"],
+        "Belgium": ["belgium", "belgian", "belga", "belga/a"],
+        "Australia": ["australia", "australian", "australiano", "australiana", "australiano/a"],
+        "Colombia": ["colombia", "colombian", "colombiano", "colombiana", "colombiano/a"],
+        "Denmark": ["denmark", "danish", "danés", "danesa", "danes", "danés/a"],
+        "Norway": ["norway", "norwegian", "noruego", "noruega", "noruego/a"],
+        "Portugal": ["portugal", "portuguese", "portugués", "portuguesa", "portugues", "portugués/a"],
+        "Turkey": ["turkey", "turkish", "turco", "turca", "turco/a"],
+        "South Korea": ["south korea", "korean", "coreano", "coreana", "coreano del sur", "coreano/a"],
+        "Egypt": ["egypt", "egyptian", "egipcio", "egipcia", "egipcio/a"],
+        "India": ["india", "indian", "indio", "india", "indio/a"],
+        "Chile": ["chile", "chilean", "chileno", "chilena", "chileno/a"],
+        "South Africa": ["south africa", "south african", "sudafricano", "sudafricana", "sudafricano/a"]
+    };
+
+    function isCountryMatch(dbValue, selectedCountry) {
+        if (!dbValue || !selectedCountry) return false;
+        const dbParts = dbValue.split('/');
+        for (let part of dbParts) {
+            const dbValNormalized = part.trim().toLowerCase();
+            const selCountryNormalized = selectedCountry.trim().toLowerCase();
+            if (dbValNormalized === selCountryNormalized) return true;
+            const synonyms = countrySynonyms[selectedCountry];
+            if (synonyms && synonyms.map(s => s.toLowerCase()).includes(dbValNormalized)) {
+                return true;
+            }
+            if (dbValNormalized.includes(selCountryNormalized) || selCountryNormalized.includes(dbValNormalized)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     let instrumentData = {};
     let instrumentTagMap = {};
     let allWorks = [];
@@ -684,11 +738,8 @@
     async function loadData() {
         await Promise.all([loadInstruments(), loadWorkInstruments(), loadWorks()]);
         
-        const uniqueNationalities = [...new Set(allWorks.map(w => 
-            w.composer?.nationality || w.submitter?.nationality
-        ).filter(Boolean))].sort();
         const sel = document.getElementById('country-select');
-        sel.innerHTML = '<option value="">All Countries</option>' + uniqueNationalities.map(c => `<option value="${c}">${c}</option>`).join('');
+        sel.innerHTML = '<option value="">All Countries</option>' + countries.map(c => `<option value="${c}">${c}</option>`).join('');
 
         filterWorks();
     }
@@ -814,8 +865,8 @@
             if (co) {
                 const composerCountry = w.composer?.nationality;
                 const submitterCountry = w.submitter?.residence_country || w.submitter?.nationality;
-                const matchComposer = composerCountry && composerCountry.toLowerCase() === co.toLowerCase();
-                const matchSubmitter = submitterCountry && submitterCountry.toLowerCase() === co.toLowerCase();
+                const matchComposer = composerCountry && isCountryMatch(composerCountry, co);
+                const matchSubmitter = submitterCountry && isCountryMatch(submitterCountry, co);
                 if (!matchComposer && !matchSubmitter) return false;
             }
 
