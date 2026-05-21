@@ -1,5 +1,8 @@
 import supabase from './supabase.js';
 
+window.supabase = supabase;
+window.supabaseClient = supabase;
+
 /**
  * Verifica si el usuario está autenticado y tiene los permisos necesarios.
  */

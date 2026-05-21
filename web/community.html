@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Contemporánica - Community</title>
+    <meta name="description" content="Community discussions for Contemporánica. Share posts, comment, and connect with contemporary music creators.">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="js/auth.js"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "surface-container-low": "#0d1c2d",
+              "surface-container-lowest": "#010f1f",
+              "on-surface": "#d4e4fa",
+              "salmon": "#E57373",
+              "tertiary-container": "#8b96ac"
+            },
+            "fontFamily": {
+              "body-md": ["Outfit"],
+              "headline-md": ["Outfit"],
+              "display-xl": ["Outfit"],
+              "label-sm": ["Outfit"]
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(39, 54, 71, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .text-salmon { color: #E57373; }
+        .bg-salmon { background-color: #E57373; }
+        .border-salmon { border-color: #E57373; }
+        .cascade-wrapper { position: relative; }
+        .cascade-menu {
+            display: none;
+            position: relative;
+            margin-top: 8px;
+            z-index: 9999;
+            min-width: 100%;
+            background: #0d1c2d;
+            border: 1px solid rgba(229, 115, 115, 0.4);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            padding: 8px 0;
+            backdrop-filter: blur(25px);
+            animation: slideDown 0.2s ease-out;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .cascade-item {
+            padding: 12px 16px;
+            color: #d4e4fa;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .cascade-item:hover {
+            background: rgba(229, 115, 115, 0.15);
+            color: #E57373;
+        }
+        .cascade-item::after {
+            content: '›';
+            font-size: 16px;
+            color: rgba(212,228,250,0.4);
+            display: none;
+        }
+        .cascade-item:has(.cascade-submenu)::after {
+            display: block;
+        }
+        .cascade-submenu {
+            display: none;
+            position: absolute;
+            top: -8px;
+            left: 100%;
+            margin-left: 2px;
+            min-width: 240px;
+            background: #0d1c2d;
+            border: 1px solid rgba(229, 115, 115, 0.4);
+            border-radius: 12px;
+            padding: 8px 0;
+            box-shadow: 20px 20px 50px rgba(0,0,0,0.8);
+            z-index: 10000;
+            animation: slideRight 0.15s ease-out;
+        }
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .cascade-item:hover > .cascade-submenu {
+            display: block;
+        }
+        .tag-enter {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .work-card {
+            background: rgba(13, 28, 45, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 24px;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .work-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(229,115,115,0.35);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+        }
+        .glass-panel { background: rgba(39, 54, 71, 0.4); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface font-body-md selection:bg-salmon selection:text-white">
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 h-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/10">
+    <div class="flex items-center gap-12">
+        <a href="index.html" class="text-2xl font-bold tracking-tighter text-white">Contemporánica</a>
+    </div>
+    <div class="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-8 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+        <a class="hover:text-salmon transition-colors" href="index.html">Home</a>
+        <a class="hover:text-salmon transition-colors" href="index.html#about-section">About</a>
+    </div>
+    <div class="flex items-center gap-4" id="auth-header">
+        <a href="index.html" class="px-4 py-2 rounded-full border border-white/10 text-white font-sans font-medium hover:bg-white/5 transition-all duration-300">Home</a>
+        <button onclick="window.openCreatePostModal()" class="px-4 py-2 rounded-xl bg-salmon text-white text-sm font-semibold hover:brightness-110 active:scale-[0.98] transition-all duration-300">New Post</button>
+    </div>
+</nav>
+<main class="max-w-6xl mx-auto px-8 pt-28 pb-24">
+    <section class="mt-12 space-y-8">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-slate-950/70 border border-white/10 rounded-3xl p-8 glass-panel">
+            <div>
+                <h1 class="font-headline-lg text-4xl font-semibold text-white">Community Discussions</h1>
+                <p class="text-tertiary-container text-sm mt-2">Ask questions, share ideas, and connect with contemporary music creators.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div class="relative flex items-center bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white hover:border-salmon/50 transition-colors">
+                    <span class="material-symbols-outlined text-[16px] text-slate-400 mr-1.5">filter_list</span>
+                    <select id="forum-sort-select" onchange="window.loadPosts()" style="background: transparent; border: none; color: white; outline: none; cursor: pointer;" class="pr-1">
+                        <option value="newest" style="background: #010f1f; color: white;">Newest</option>
+                        <option value="top" style="background: #010f1f; color: white;">Top Voted</option>
+                    </select>
+                </div>
+                <button onclick="window.openCreatePostModal()" class="px-5 py-2.5 bg-salmon hover:brightness-110 active:scale-95 text-white font-sans text-xs font-semibold uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">add_comment</span> New Post
+                </button>
+            </div>
+        </div>
+
+        <div id="forum-posts-container" class="grid grid-cols-1 gap-4">
+            <div class="flex justify-center items-center py-20 bg-white/5 rounded-3xl border border-white/10">
+                <span class="material-symbols-outlined text-4xl animate-spin text-salmon">sync</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Create Post Modal -->
+<div id="create-post-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 99998; align-items: center; justify-content: center; padding: 24px;">
+    <div style="background: #0d1c2d; border: 1px solid rgba(229,115,115,0.25); border-radius: 24px; max-width: 580px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+        <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 2px;">Create Discussion</h3>
+                <p style="font-size: 11px; color: #8b96ac; text-transform: uppercase; letter-spacing: 0.05em;">Start a new community topic</p>
+            </div>
+            <button onclick="window.closeCreatePostModal()" style="background: rgba(255,255,255,0.06); border: none; color: #d4e4fa; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" class="hover:bg-white/10">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+        <form onsubmit="window.handleCreatePostSubmit(event)" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
+            <div class="space-y-1">
+                <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider font-sans">Title</label>
+                <input type="text" id="post-title-input" required placeholder="What is your topic about?" style="width: 100%;" class="h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider font-sans">Content</label>
+                <textarea id="post-content-input" required rows="4" placeholder="Write your post content here..." style="width: 100%; resize: none;" class="bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-salmon transition-colors"></textarea>
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider font-sans">Image (Optional)</label>
+                <div class="flex gap-3 items-center">
+                    <div class="flex-1 relative h-20 bg-white/5 border border-dashed border-white/10 rounded-xl overflow-hidden group">
+                        <label class="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-all duration-300">
+                            <div class="flex flex-col items-center justify-center text-center" id="upload-placeholder">
+                                <span class="material-symbols-outlined text-slate-400 group-hover:text-salmon transition-colors">cloud_upload</span>
+                                <p class="text-[10px] text-slate-400 font-sans mt-1">Upload from computer</p>
+                            </div>
+                            <img id="post-image-preview" class="hidden absolute inset-0 w-full h-full object-cover">
+                            <input type="file" id="post-file-input" accept="image/*" class="hidden" onchange="window.handlePostFileChange(this)">
+                        </label>
+                        <button type="button" id="clear-post-image-btn" onclick="window.clearPostFile(event)" class="hidden absolute top-2 right-2 z-10 w-6 h-6 bg-slate-950/80 hover:bg-salmon text-white rounded-full flex items-center justify-center transition-all duration-300">
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                    </div>
+                    <div class="text-xs text-slate-500 font-sans uppercase shrink-0">or</div>
+                    <input type="url" id="post-media-input" placeholder="Paste image URL..." class="flex-1 h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors text-sm">
+                </div>
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider font-sans">External Link (Optional)</label>
+                <input type="url" id="post-link-input" placeholder="https://example.com/score-or-video" style="width: 100%;" class="h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors">
+            </div>
+            <button type="submit" class="mt-2 w-full h-11 bg-salmon hover:brightness-110 active:scale-95 text-white font-sans text-xs font-semibold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">publish</span> Publish Post
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    window.openCreatePostModal = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert("Please log in to participate in the community discussions.");
+            window.location.href = 'login.html';
+            return;
+        }
+        document.getElementById('create-post-backdrop').style.display = 'flex';
+    };
+
+    window.closeCreatePostModal = () => {
+        document.getElementById('create-post-backdrop').style.display = 'none';
+        document.getElementById('post-title-input').value = '';
+        document.getElementById('post-content-input').value = '';
+        document.getElementById('post-media-input').value = '';
+        document.getElementById('post-link-input').value = '';
+        window.clearPostFile();
+    };
+
+    window.handlePostFileChange = (input) => {
+        const file = input.files[0];
+        const preview = document.getElementById('post-image-preview');
+        const placeholder = document.getElementById('upload-placeholder');
+        const clearBtn = document.getElementById('clear-post-image-btn');
+        const urlInput = document.getElementById('post-media-input');
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                clearBtn.classList.remove('hidden');
+                urlInput.value = '';
+                urlInput.disabled = true;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    window.clearPostFile = (e) => {
+        if (e) e.stopPropagation();
+        const input = document.getElementById('post-file-input');
+        const preview = document.getElementById('post-image-preview');
+        const placeholder = document.getElementById('upload-placeholder');
+        const clearBtn = document.getElementById('clear-post-image-btn');
+        const urlInput = document.getElementById('post-media-input');
+
+        if (input) input.value = '';
+        if (preview) {
+            preview.src = '';
+            preview.classList.add('hidden');
+        }
+        if (placeholder) placeholder.classList.remove('hidden');
+        if (clearBtn) clearBtn.classList.add('hidden');
+        if (urlInput) {
+            urlInput.disabled = false;
+        }
+    };
+
+    window.handleCreatePostSubmit = async (e) => {
+        e.preventDefault();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalBtnHTML = submitBtn ? submitBtn.innerHTML : 'Publish Post';
+
+        const title = document.getElementById('post-title-input').value.trim();
+        const content = document.getElementById('post-content-input').value.trim();
+        let mediaUrl = document.getElementById('post-media-input').value.trim();
+        const externalLink = document.getElementById('post-link-input').value.trim();
+        const fileInput = document.getElementById('post-file-input');
+
+        if (!title || !content) return;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const currentUserId = session.user.id;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<span class="material-symbols-outlined text-[16px] animate-spin">sync</span> Uploading...`;
+            }
+
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `posts/${currentUserId}-${Date.now()}.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('Avatar')
+                    .upload(fileName, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('Avatar')
+                    .getPublicUrl(fileName);
+
+                mediaUrl = publicUrl;
+            }
+
+            const { error } = await supabase
+                .from('posts')
+                .insert({
+                    title,
+                    content,
+                    media_url: mediaUrl || null,
+                    external_link: externalLink || null,
+                    author_id: currentUserId
+                });
+
+            if (error) throw error;
+
+            window.closeCreatePostModal();
+            window.loadPosts();
+
+        } catch (err) {
+            console.error("Error creating post:", err);
+            alert("Failed to create post: " + (err.message || err));
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHTML;
+            }
+        }
+    };
+
+    window.loadPosts = async () => {
+        const container = document.getElementById('forum-posts-container');
+        if (!container) return;
+
+        const sortSelect = document.getElementById('forum-sort-select');
+        const sortBy = sortSelect ? sortSelect.value : 'newest';
+
+        try {
+            const { data: posts, error } = await supabase
+                .from('posts')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            if (!posts || posts.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-20 bg-white/5 rounded-3xl border border-white/10">
+                        <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">forum</span>
+                        <h3 class="text-xl text-white font-medium">No discussions yet</h3>
+                        <p class="text-slate-400">Be the first to share something with the community!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const authorIds = [...new Set(posts.map(p => p.author_id))];
+            const { data: profiles, error: pError } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name, avatar_url')
+                .in('id', authorIds);
+            if (pError) throw pError;
+
+            const { data: comments, error: cError } = await supabase
+                .from('comments')
+                .select('post_id');
+            if (cError) throw cError;
+
+            let votes = [];
+            try {
+                const { data: vData, error: vError } = await supabase.from('votes').select('*');
+                if (!vError && vData) votes = vData;
+            } catch (vErr) {
+                console.warn("Failed to fetch votes:", vErr);
+            }
+
+            if (sortBy === 'top') {
+                posts.sort((a, b) => {
+                    const scoreA = votes.filter(v => v.post_id === a.id).reduce((acc, curr) => acc + curr.vote_type, 0);
+                    const scoreB = votes.filter(v => v.post_id === b.id).reduce((acc, curr) => acc + curr.vote_type, 0);
+                    return scoreB - scoreA;
+                });
+            }
+
+            container.innerHTML = posts.map(p => {
+                const profile = profiles.find(pr => pr.id === p.author_id) || { first_name: 'Anonymous', last_name: 'User' };
+                const authorName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Anonymous User';
+                const initials = (profile.first_name ? profile.first_name[0] : '') + (profile.last_name ? profile.last_name[0] : '');
+
+                const postComments = comments.filter(c => c.post_id === p.id);
+                const commentsCount = postComments.length;
+
+                const postVotes = votes.filter(v => v.post_id === p.id);
+                const score = postVotes.reduce((acc, curr) => acc + curr.vote_type, 0);
+
+                const avatarHTML = profile.avatar_url
+                    ? `<img src="${profile.avatar_url}" class="w-10 h-10 rounded-xl object-cover border border-white/10">`
+                    : `<div class="w-10 h-10 rounded-xl bg-salmon/10 border border-salmon/20 flex items-center justify-center text-salmon font-bold text-sm font-sans">${initials || '?'}</div>`;
+
+                const mediaPreview = p.media_url
+                    ? `<div class="w-full mt-4 rounded-2xl overflow-hidden border border-white/10 bg-slate-950"><img src="${p.media_url}" class="w-full h-48 object-cover"></div>`
+                    : '';
+
+                const externalLinkHTML = p.external_link
+                    ? `<a href="${p.external_link}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-sans font-semibold text-salmon hover:underline mt-3 bg-salmon/10 border border-salmon/20 px-2 py-1 rounded-md">` +
+                      `<span class="material-symbols-outlined text-[12px]">link</span> Link ↗</a>`
+                    : '';
+
+                return `
+                    <article class="glass-panel p-6 rounded-3xl border border-white/10 transition-all hover:border-salmon/20">
+                        <div class="flex items-center justify-between gap-4 mb-4">
+                            <div class="flex items-center gap-3">
+                                ${avatarHTML}
+                                <div>
+                                    <p class="text-sm font-semibold text-white">${authorName}</p>
+                                    <p class="text-[11px] text-slate-500">${commentsCount} comment${commentsCount !== 1 ? 's' : ''}</p>
+                                </div>
+                            </div>
+                            <div class="text-[12px] font-semibold ${score > 0 ? 'text-salmon' : score < 0 ? 'text-cyan-400' : 'text-slate-300'}">${score >= 0 ? '+' : ''}${score}</div>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">${p.title}</h3>
+                        <p class="text-sm text-slate-300 leading-relaxed line-clamp-3">${p.content}</p>
+                        ${mediaPreview}
+                        <div class="mt-4 flex flex-wrap items-center gap-3">
+                            ${externalLinkHTML}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+        } catch (err) {
+            console.error("Error loading posts:", err);
+            const message = err?.message || String(err) || 'An unexpected error occurred.';
+            container.innerHTML = `<div class="text-center py-10 text-rose-400 font-sans text-xs"><p>Error loading discussions.</p><p class="mt-2 text-[11px] text-rose-300">${message}</p></div>`;
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        window.loadPosts();
+        document.getElementById('create-post-backdrop').addEventListener('click', e => {
+            if (e.target === document.getElementById('create-post-backdrop')) window.closeCreatePostModal();
+        });
+    });
+</script>
+</body>
+</html>

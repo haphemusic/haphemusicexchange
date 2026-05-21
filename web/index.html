@@ -234,7 +234,7 @@
 
     <!-- Center Column: Community & About Links -->
     <div class="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-8 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-        <a class="hover:text-salmon transition-colors" href="#community-section">Community</a>
+        <a class="hover:text-salmon transition-colors" href="community.html">Community</a>
         <a class="hover:text-salmon transition-colors" href="#about-section">About</a>
     </div>
 
@@ -335,6 +335,11 @@
             </div>
         </div>
         
+        <div class="mt-6">
+            <label class="block text-xs text-tertiary-container uppercase tracking-[0.2em] font-semibold mb-2">Search works</label>
+            <input id="work-search-input" type="text" oninput="filterWorks()" placeholder="Search by title, composer, or instrumentation..." class="w-full h-[50px] bg-surface-container-low border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors">
+        </div>
+
         <!-- Tags Container below the grid -->
         <div class="flex flex-wrap gap-2 mt-4 relative z-10" id="tags-container"></div>
 
@@ -355,36 +360,6 @@
             <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">music_off</span>
             <h3 class="text-xl text-white font-medium">No works found in the archive</h3>
             <p id="no-results-text" class="text-slate-400">Try adjusting your filters or check that the Supabase `works` table has records.</p>
-        </div>
-    </section>
-
-    <!-- Community Discussions Section -->
-    <section id="community-section" class="mt-24 space-y-8">
-        <div class="flex justify-between items-end border-b border-white/5 pb-4">
-            <div>
-                <h2 class="font-headline-lg text-3xl font-medium text-white">Community Discussions</h2>
-                <p class="text-tertiary-container text-sm">Ask questions, share advice, and talk about contemporary music</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <!-- Sorting Select -->
-                <div class="relative flex items-center bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-sans text-white hover:border-salmon/50 transition-colors">
-                    <span class="material-symbols-outlined text-[16px] text-slate-400 mr-1.5">filter_list</span>
-                    <select id="forum-sort-select" onchange="window.loadPosts()" style="background: transparent; border: none; color: white; outline: none; cursor: pointer;" class="pr-1">
-                        <option value="newest" style="background: #010f1f; color: white;">Newest</option>
-                        <option value="top" style="background: #010f1f; color: white;">Top Voted</option>
-                    </select>
-                </div>
-                <button onclick="window.openCreatePostModal()" class="px-5 py-2.5 bg-salmon hover:brightness-110 active:scale-95 text-white font-sans text-xs font-semibold uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[16px]">add_comment</span> New Post
-                </button>
-            </div>
-        </div>
-
-        <div id="forum-posts-container" class="grid grid-cols-1 gap-4">
-            <!-- Loading state -->
-            <div class="flex justify-center items-center py-20 bg-white/5 rounded-3xl border border-white/10">
-                <span class="material-symbols-outlined text-4xl animate-spin text-salmon">sync</span>
-            </div>
         </div>
     </section>
 
@@ -829,8 +804,7 @@
         // Fetch all validated works from Supabase joining both classical composers and submitting user profiles
         const { data: works, error } = await supabase
             .from('works')
-            .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instruments(*))')
-            .eq('status', 'validated');
+            .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))');
 
         if (error) {
             console.error("Error fetching works:", error);
@@ -842,6 +816,7 @@
         const activeTags = Array.from(tagsContainer ? tagsContainer.querySelectorAll('.tag-item') : []).map(el => 
             el.textContent.replace('×', '').trim().toLowerCase()
         );
+        const searchTerm = document.getElementById('work-search-input')?.value.trim().toLowerCase();
 
         // Update dropdown label text dynamically
         const selText = document.getElementById('selected-instrument-text');
@@ -882,9 +857,9 @@
             // Instrument tag filter (match any of the selected instruments)
             if (activeTags.length > 0) {
                 const hasInstrument = w.work_instruments?.some(wi => {
-                    const instName = wi.instruments?.name?.toLowerCase();
-                    const instVariant = wi.instruments?.variant?.toLowerCase();
-                    const instFamily = wi.instruments?.family?.toLowerCase();
+                    const instName = wi.instrument_id?.name?.toLowerCase();
+                    const instVariant = wi.instrument_id?.variant?.toLowerCase();
+                    const instFamily = wi.instrument_id?.family?.toLowerCase();
                     return activeTags.some(tag => 
                         (instName && instName.includes(tag)) || 
                         (instVariant && instVariant.includes(tag)) ||
@@ -893,6 +868,22 @@
                     );
                 });
                 if (!hasInstrument) return false;
+            }
+
+            if (searchTerm) {
+                const title = w.title?.toLowerCase() || '';
+                const subtitle = w.subtitle?.toLowerCase() || '';
+                const composerName = w.composer?.name?.toLowerCase() || '';
+                const submitterName = `${w.submitter?.first_name || ''} ${w.submitter?.last_name || ''}`.trim().toLowerCase();
+                const performerCombination = w.performer_combination?.toLowerCase() || '';
+                const instrumentText = (w.work_instruments || [])
+                    .map(wi => [wi.instrument_id?.name, wi.instrument_id?.variant, wi.instrument_id?.family]
+                        .filter(Boolean)
+                        .join(' ')
+                    ).join(' ').toLowerCase();
+
+                const searchable = `${title} ${subtitle} ${composerName} ${submitterName} ${performerCombination} ${instrumentText}`;
+                if (!searchable.includes(searchTerm)) return false;
             }
 
             return true;
@@ -923,7 +914,7 @@
                 || w.submitter?.nationality 
                 || '';
                 
-            const insts = w.work_instruments?.map(wi => wi.instruments).filter(Boolean) || [];
+            const insts = w.work_instruments?.map(wi => wi.instrument_id).filter(Boolean) || [];
             const instruments = insts.map(i => i.name).filter(Boolean).join(', ');
             
             const stylePills = (w.style_tags || []).slice(0,3).map(t =>
@@ -1281,7 +1272,7 @@
                         status, created_at,
                         composer:composer_id(name, nationality, period),
                         submitter:submitted_by(first_name, last_name),
-                        work_instruments(*, instruments(*))
+                        work_instruments(*, instrument_id(*))
                     `)
                     .or(`composer_id.eq.${userId},submitted_by.eq.${userId}`)
                     .eq('status', 'validated')
@@ -1292,7 +1283,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             ${works.map(w => {
                                 const wData = encodeURIComponent(JSON.stringify(w)).replace(/'/g, "%27");
-                                const insts = w.work_instruments?.map(wi => wi.instruments).filter(Boolean) || [];
+                                const insts = w.work_instruments?.map(wi => wi.instrument_id).filter(Boolean) || [];
                                 const instData = encodeURIComponent(JSON.stringify(insts)).replace(/'/g, "%27");
                                 return `
                                     <div onclick="window.openWorkModal('${wData}', '${instData}'); window.closeUserProfile();" class="p-4 bg-white/2 hover:bg-white/5 border border-white/5 rounded-2xl cursor-pointer hover:border-salmon/20 transition-all flex flex-col justify-between">
@@ -2484,11 +2475,11 @@
                 // Fetch the updated work data
                 const { data: updatedWork } = await supabase
                     .from('works')
-                    .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instruments(*))')
+                    .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
                     .eq('id', workId)
                     .single();
                 if (updatedWork) {
-                    const insts = updatedWork.work_instruments?.map(wi => wi.instruments).filter(Boolean) || [];
+                    const insts = updatedWork.work_instruments?.map(wi => wi.instrument_id).filter(Boolean) || [];
                     const wData = encodeURIComponent(JSON.stringify(updatedWork)).replace(/'/g, "%27");
                     const instData = encodeURIComponent(JSON.stringify(insts)).replace(/'/g, "%27");
                     window.openWorkModal(wData, instData);
