@@ -292,6 +292,10 @@
                     </button>
                     <div id="main-list" class="cascade-menu" style="z-index: 9999;"></div>
                 </div>
+                <div class="flex items-center gap-2 mt-2 px-1">
+                    <input type="checkbox" id="instrument-exclusive" onchange="filterWorks()" class="w-4 h-4 rounded border-white/10 bg-surface-container-low text-salmon focus:ring-salmon focus:ring-opacity-25" checked>
+                    <label for="instrument-exclusive" class="text-slate-400 text-[11px] font-medium cursor-pointer select-none">Only show works containing ONLY these instruments</label>
+                </div>
             </div>
 
             <div class="space-y-2">
@@ -894,20 +898,39 @@
                 if (!matchComposer && !matchSubmitter) return false;
             }
 
-            // Instrument tag filter (match any of the selected instruments)
+            // Instrument tag filter
             if (activeTags.length > 0) {
-                const hasInstrument = w.work_instruments?.some(wi => {
-                    const instName = wi.instrument_id?.name?.toLowerCase();
-                    const instVariant = wi.instrument_id?.variant?.toLowerCase();
-                    const instFamily = wi.instrument_id?.family?.toLowerCase();
-                    return activeTags.some(tag => 
-                        (instName && instName.includes(tag)) || 
-                        (instVariant && instVariant.includes(tag)) ||
-                        (instFamily && instFamily.includes(tag)) ||
-                        tag.includes(instName || '')
-                    );
-                });
-                if (!hasInstrument) return false;
+                const exclusiveMatch = document.getElementById('instrument-exclusive')?.checked;
+                
+                if (exclusiveMatch) {
+                    if (!w.work_instruments || w.work_instruments.length === 0) return false;
+                    
+                    const allInstrumentsMatch = w.work_instruments.every(wi => {
+                        const instName = wi.instrument_id?.name?.toLowerCase();
+                        const instVariant = wi.instrument_id?.variant?.toLowerCase();
+                        const instFamily = wi.instrument_id?.family?.toLowerCase();
+                        return activeTags.some(tag => 
+                            (instName && instName.includes(tag)) || 
+                            (instVariant && instVariant.includes(tag)) ||
+                            (instFamily && instFamily.includes(tag)) ||
+                            tag.includes(instName || '')
+                        );
+                    });
+                    if (!allInstrumentsMatch) return false;
+                } else {
+                    const hasInstrument = w.work_instruments?.some(wi => {
+                        const instName = wi.instrument_id?.name?.toLowerCase();
+                        const instVariant = wi.instrument_id?.variant?.toLowerCase();
+                        const instFamily = wi.instrument_id?.family?.toLowerCase();
+                        return activeTags.some(tag => 
+                            (instName && instName.includes(tag)) || 
+                            (instVariant && instVariant.includes(tag)) ||
+                            (instFamily && instFamily.includes(tag)) ||
+                            tag.includes(instName || '')
+                        );
+                    });
+                    if (!hasInstrument) return false;
+                }
             }
 
             if (searchTerm) {
