@@ -385,15 +385,27 @@ async function loadMyWorks() {
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px">
                 ${w.status === 'validated'
-                    ? '<span class="material-symbols-outlined text-emerald-400" style="font-size:16px">verified</span>'
-                    : '<span class="material-symbols-outlined text-amber-400" style="font-size:16px">pending</span>'
+                    ? '<span class="material-symbols-outlined text-emerald-400" style="font-size:16px" title="Validated & Public">verified</span>'
+                    : w.status === 'hidden'
+                    ? '<span class="material-symbols-outlined text-slate-400" style="font-size:16px" title="Not Visible (Hidden)">visibility_off</span>'
+                    : '<span class="material-symbols-outlined text-amber-400" style="font-size:16px" title="Pending Validation">pending</span>'
                 }
+                <button onclick="window.editWork('${encodeURIComponent(JSON.stringify(w))}')"
+                    style="background:rgba(212,228,250,0.08);border:1px solid rgba(255,255,255,0.1);color:#d4e4fa;
+                           width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;
+                           justify-content:center;transition:all 0.2s"
+                    onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                    onmouseout="this.style.background='rgba(212,228,250,0.08)'"
+                    title="Edit">
+                    <span class="material-symbols-outlined" style="font-size:15px">edit</span>
+                </button>
                 <button onclick="window.confirmDelete(${w.id}, '${w.title.replace(/'/g, "\\'")}')"
                     style="background:rgba(229,115,115,0.12);border:1px solid rgba(229,115,115,0.2);color:#E57373;
                            width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;
                            justify-content:center;transition:all 0.2s"
                     onmouseover="this.style.background='rgba(229,115,115,0.3)'"
-                    onmouseout="this.style.background='rgba(229,115,115,0.12)'">
+                    onmouseout="this.style.background='rgba(229,115,115,0.12)'"
+                    title="Delete">
                     <span class="material-symbols-outlined" style="font-size:15px">delete</span>
                 </button>
             </div>
@@ -559,6 +571,7 @@ function showSection(sectionId) {
 
 // ── Wizard state ──────────────────────────────────────────────────
 let currentWizStep = 0;
+let editingWorkId = null;
 const TOTAL_STEPS = 6;
 const STEP_LABELS = [
     'Step 1 of 6 — General Information',
@@ -571,7 +584,71 @@ const STEP_LABELS = [
 
 window.showSection = showSection;
 
+function resetWorkForm() {
+    editingWorkId = null;
+    
+    // Reset title
+    const modalTitle = document.getElementById('work-modal-title');
+    if (modalTitle) modalTitle.textContent = 'Register New Composition';
+
+    // Reset submit button text
+    const submitBtn = document.getElementById('wiz-submit');
+    if (submitBtn) {
+        submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">upload</span> Submit to Archive';
+    }
+
+    document.getElementById('w-title').value = '';
+    document.getElementById('w-subtitle').value = '';
+    document.getElementById('w-year').value = new Date().getFullYear();
+    document.getElementById('w-duration').value = '';
+    document.getElementById('w-catalogue').value = '';
+
+    document.getElementById('w-scoring').value = '';
+    document.getElementById('w-numperf').value = '';
+    document.getElementById('w-combination').value = '';
+    document.getElementById('w-soloist').value = '';
+    document.getElementById('w-preparations').value = '';
+    document.getElementById('w-space').value = '';
+
+    document.getElementById('w-elec-no').checked = true;
+    document.getElementById('electronics-fields').style.display = 'none';
+    document.getElementById('w-elec-type').value = '';
+    document.getElementById('w-elec-software').value = '';
+
+    document.getElementById('w-prem-date').value = '';
+    document.getElementById('w-prem-city').value = '';
+    document.getElementById('w-prem-venue').value = '';
+    document.getElementById('w-prem-performers').value = '';
+
+    document.getElementById('w-commissioned').value = '';
+    document.getElementById('w-publisher').value = '';
+    document.getElementById('w-score-status').value = 'finished';
+    document.getElementById('w-availability').value = '';
+    document.getElementById('w-score-url').value = '';
+    document.getElementById('w-media-url').value = '';
+    document.getElementById('w-recording-type').value = 'none';
+
+    document.getElementById('w-notes').value = '';
+    document.getElementById('w-tags').value = '';
+    document.getElementById('w-difficulty').value = '';
+    document.getElementById('w-language').value = '';
+    document.getElementById('w-additional').value = '';
+
+    const visibleCheckbox = document.getElementById('w-visible');
+    if (visibleCheckbox) visibleCheckbox.checked = true;
+
+    selectedWizInstruments.clear();
+    const tagsContainer = document.getElementById('wiz-tags-container');
+    if (tagsContainer) tagsContainer.innerHTML = '';
+    updateWizInstrumentButtonLabel();
+
+    // Show Excel trigger
+    const excelWrapper = document.getElementById('excel-import-trigger-wrapper');
+    if (excelWrapper) excelWrapper.style.display = 'flex';
+}
+
 window.openWorkModal = () => {
+    resetWorkForm();
     currentWizStep = 0;
     updateWizUI();
     document.getElementById('work-modal').classList.remove('hidden');
@@ -584,6 +661,116 @@ window.openWorkModal = () => {
                 document.getElementById('w-elec-yes').checked ? 'block' : 'none';
         });
     });
+};
+
+window.editWork = (wEncoded) => {
+    const w = JSON.parse(decodeURIComponent(wEncoded));
+    
+    // Reset form to base state
+    resetWorkForm();
+    
+    editingWorkId = w.id;
+
+    // Change title and button
+    const modalTitle = document.getElementById('work-modal-title');
+    if (modalTitle) modalTitle.textContent = 'Edit Composition';
+
+    const submitBtn = document.getElementById('wiz-submit');
+    if (submitBtn) {
+        submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">save</span> Save Changes';
+    }
+
+    // Hide Excel importer trigger
+    const excelWrapper = document.getElementById('excel-import-trigger-wrapper');
+    if (excelWrapper) excelWrapper.style.display = 'none';
+    const excelPanel = document.getElementById('excel-import-panel');
+    if (excelPanel) excelPanel.style.display = 'none';
+
+    // Populate general fields
+    document.getElementById('w-title').value = w.title || '';
+    document.getElementById('w-subtitle').value = w.subtitle || '';
+    document.getElementById('w-year').value = w.year || '';
+    document.getElementById('w-duration').value = w.duration_minutes || '';
+    document.getElementById('w-catalogue').value = w.catalogue_number || '';
+
+    // Populate scoring
+    document.getElementById('w-scoring').value = w.scoring_category || '';
+    document.getElementById('w-numperf').value = w.num_performers || '';
+    document.getElementById('w-combination').value = w.performer_combination || '';
+    document.getElementById('w-soloist').value = w.soloist_instrument || '';
+    document.getElementById('w-preparations').value = w.unusual_preparations || '';
+    document.getElementById('w-space').value = w.space_requirements || '';
+
+    // Populate electronics
+    if (w.has_electronics) {
+        document.getElementById('w-elec-yes').checked = true;
+        document.getElementById('electronics-fields').style.display = 'block';
+    } else {
+        document.getElementById('w-elec-no').checked = true;
+        document.getElementById('electronics-fields').style.display = 'none';
+    }
+    document.getElementById('w-elec-type').value = w.electronics_type || '';
+    document.getElementById('w-elec-software').value = w.electronics_software || '';
+
+    // Populate premiere
+    document.getElementById('w-prem-date').value = w.premiere_date || '';
+    document.getElementById('w-prem-city').value = w.premiere_city || '';
+    document.getElementById('w-prem-venue').value = w.premiere_venue || '';
+    document.getElementById('w-prem-performers').value = w.premiere_performers || '';
+
+    // Populate production & rights
+    document.getElementById('w-commissioned').value = w.commissioned_by || '';
+    document.getElementById('w-publisher').value = w.publisher || '';
+    document.getElementById('w-score-status').value = w.score_status || 'finished';
+    document.getElementById('w-availability').value = w.score_availability || '';
+    document.getElementById('w-score-url').value = w.score_sample_url || '';
+    document.getElementById('w-media-url').value = w.media_url || '';
+    document.getElementById('w-recording-type').value = w.recording_type || 'none';
+
+    // Populate context & search
+    document.getElementById('w-notes').value = w.program_notes || '';
+    document.getElementById('w-tags').value = (w.style_tags || []).join(', ');
+    document.getElementById('w-difficulty').value = w.technical_difficulty || '';
+    document.getElementById('w-language').value = w.language_librettist || '';
+    document.getElementById('w-additional').value = w.additional_info || '';
+
+    // Populate visibility
+    const visibleCheckbox = document.getElementById('w-visible');
+    if (visibleCheckbox) {
+        visibleCheckbox.checked = (w.status !== 'hidden');
+    }
+
+    // Populate instruments
+    selectedWizInstruments.clear();
+    const tagsContainer = document.getElementById('wiz-tags-container');
+    if (tagsContainer) tagsContainer.innerHTML = '';
+
+    if (w.work_instruments) {
+        w.work_instruments.forEach(wi => {
+            if (wi.instrument_id) {
+                const instId = wi.instrument_id.id;
+                const v = wi.instrument_id.variant;
+                const n = wi.instrument_id.name;
+                const displayName = v ? (v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`) : n;
+                selectedWizInstruments.add(instId);
+                if (tagsContainer) {
+                    const tagHtml = `
+                        <div class="tag-item bg-salmon/20 text-salmon px-3 py-1.5 rounded-full text-[11px] flex items-center gap-2" data-inst-id="${instId}">
+                            <span>${displayName}</span>
+                            <span class="cursor-pointer font-bold text-xs hover:text-white" onclick="window.removeWizInstrumentTag(${instId})">×</span>
+                        </div>
+                    `;
+                    tagsContainer.insertAdjacentHTML('beforeend', tagHtml);
+                }
+            }
+        });
+        updateWizInstrumentButtonLabel();
+    }
+
+    currentWizStep = 0;
+    updateWizUI();
+    document.getElementById('work-modal').classList.remove('hidden');
+    document.getElementById('work-modal').classList.add('flex');
 };
 
 window.closeWorkModal = () => {
@@ -680,29 +867,57 @@ window.saveWork = async () => {
 
         composer_id:   null,         // Only set for catalog works via composers table
         submitted_by:  currentUser.id,
-        status:        'validated',
+        status:        document.getElementById('w-visible').checked ? 'validated' : 'hidden',
     };
 
     const btn = document.getElementById('wiz-submit');
     btn.textContent = 'Saving...';
     btn.disabled = true;
 
-    const { data: insertedWork, error } = await supabase
-        .from('works')
-        .insert(payload)
-        .select()
-        .single();
+    let savedWork = null;
+    let saveError = null;
 
-    if (error) {
-        btn.textContent = 'Submit to Archive';
+    if (editingWorkId) {
+        const { data, error } = await supabase
+            .from('works')
+            .update(payload)
+            .eq('id', editingWorkId)
+            .select()
+            .single();
+        savedWork = data;
+        saveError = error;
+    } else {
+        const { data, error } = await supabase
+            .from('works')
+            .insert(payload)
+            .select()
+            .single();
+        savedWork = data;
+        saveError = error;
+    }
+
+    if (saveError) {
+        btn.innerHTML = editingWorkId 
+            ? '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">save</span> Save Changes'
+            : '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">upload</span> Submit to Archive';
         btn.disabled = false;
-        alert('Error saving work: ' + error.message);
+        alert('Error saving work: ' + saveError.message);
         return;
     }
 
-    if (insertedWork && selectedWizInstruments.size > 0) {
+    const workIdToLink = editingWorkId || savedWork.id;
+
+    if (editingWorkId) {
+        // Delete existing relations first
+        await supabase
+            .from('work_instruments')
+            .delete()
+            .eq('work_id', editingWorkId);
+    }
+
+    if (workIdToLink && selectedWizInstruments.size > 0) {
         const relationPayloads = [...selectedWizInstruments].map(instId => ({
-            work_id: insertedWork.id,
+            work_id: workIdToLink,
             instrument_id: instId,
             quantity: 1
         }));
@@ -717,7 +932,7 @@ window.saveWork = async () => {
         }
     }
 
-    btn.textContent = 'Submit to Archive';
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">upload</span> Submit to Archive';
     btn.disabled = false;
     closeWorkModal();
     await loadStats();

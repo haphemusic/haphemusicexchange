@@ -706,7 +706,8 @@
                 status, created_at,
                 composer:composer_id(name, nationality, period),
                 submitter:submitted_by(first_name, last_name)
-            `);
+            `)
+            .eq('status', 'validated');
 
         if (error) {
             console.error('Failed to load works:', error);
@@ -848,7 +849,8 @@
         // Fetch all validated works from Supabase joining both classical composers and submitting user profiles
         const { data: works, error } = await supabase
             .from('works')
-            .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))');
+            .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
+            .eq('status', 'validated');
 
         if (error) {
             console.error("Error fetching works:", error);

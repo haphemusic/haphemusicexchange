@@ -595,7 +595,7 @@
             <div style="padding:28px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.07)">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start">
                     <div>
-                        <h2 style="font-size:20px;font-weight:700;color:#fff;margin-bottom:2px">Register New Composition</h2>
+                        <h2 id="work-modal-title" style="font-size:20px;font-weight:700;color:#fff;margin-bottom:2px">Register New Composition</h2>
                         <p id="wiz-step-label" style="font-size:11px;color:#8b96ac;text-transform:uppercase;letter-spacing:0.1em">Step 1 of 6 — General Information</p>
                     </div>
                     <button onclick="closeWorkModal()" style="background:rgba(255,255,255,0.06);border:none;color:#d4e4fa;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">
@@ -666,6 +666,10 @@
                     <div class="wiz-field">
                         <label class="wiz-label">Catalogue Number</label>
                         <input class="wiz-input" id="w-catalogue" type="text" placeholder="Op. 7, BWV 143, etc.">
+                    </div>
+                    <div class="wiz-field flex items-center gap-2 mt-4" style="display:flex;align-items:center;gap:8px;margin-top:16px">
+                        <input type="checkbox" id="w-visible" checked style="width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:#0d1c2d;accent-color:#E57373;cursor:pointer">
+                        <label for="w-visible" class="wiz-label" style="margin:0;font-size:12px;color:#d4e4fa;cursor:pointer">Visible in Public Catalog</label>
                     </div>
                 </div>
 
