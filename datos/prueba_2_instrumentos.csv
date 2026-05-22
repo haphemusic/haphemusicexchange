@@ -1,0 +1,2 @@
+titulo,subtitulo,año,duracion,catalogo,scoring,performers,instrumentos,solista,dificultad,electronica,estado partitura,notas programa,tags
+"Prueba CSV 2 Instrumentos","para Flauta y Trompa",2025,5,"Op. 1","duo",2,"flauta, trompa","Flute","medium","No","finished","Obra de prueba para verificar que el CSV importa correctamente dos instrumentos.","test, prueba"

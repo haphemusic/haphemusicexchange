@@ -1,6 +1,238 @@
 import supabase from './supabase.js';
 
 let currentUser = null;
+let allInstruments = [];
+let instrumentData = {};
+let instrumentIdMap = new Map();
+let selectedWizInstruments = new Set();
+
+const SpanishToEnglishInstruments = {
+    'violin': 'Violin',
+    'viola': 'Viola',
+    'violonchelo': 'Cello',
+    'violoncelo': 'Cello',
+    'cello': 'Cello',
+    'contrabajo': 'Double Bass',
+    'arpa': 'Harp',
+    'guitarra': 'Classical Guitar',
+    'guitarra clasica': 'Classical Guitar',
+    'guitarra electrica': 'Electric Guitar',
+    'bajo electrico': 'Electric Bass',
+    'flauta': 'Flute',
+    'flautin': 'Piccolo',
+    'oboe': 'Oboe',
+    'corno ingles': 'English Horn',
+    'clarinete': 'Clarinet',
+    'clarinete bajo': 'Bass Clarinet',
+    'fagot': 'Bassoon',
+    'contrafagot': 'Contrabassoon',
+    'saxofon': 'Saxophone',
+    'saxo': 'Saxophone',
+    'trompa': 'Horn',
+    'trompeta': 'Trumpet',
+    'trombon': 'Trombone',
+    'tuba': 'Tuba/Euphonium',
+    'tuba/euphonium': 'Tuba/Euphonium',
+    'bombardino': 'Euphonium Horn',
+    'timbal': 'Timpani',
+    'timbales': 'Timpani',
+    'marimba': 'Marimba',
+    'vibracono': 'Vibraphone',
+    'vibrafono': 'Vibraphone',
+    'xilofono': 'Xylophone',
+    'glockenspiel': 'Glockenspiel',
+    'campanas tubulares': 'Tubular Bells',
+    'caja': 'Snare',
+    'bombo': 'Bass Drum',
+    'piano': 'Piano',
+    'piano preparado': 'Prepared Piano',
+    'celesta': 'Celesta',
+    'clave': 'Harpsichord',
+    'organo': 'Organ',
+    'acordeon': 'Accordion',
+    'voz': 'Solo',
+    'soprano': 'Soprano',
+    'mezzosoprano': 'Mezzo',
+    'mezzo': 'Mezzo',
+    'contralto': 'Contralto',
+    'tenor': 'Tenor',
+    'baritono': 'Baritone',
+    'bajo': 'Bass',
+    'coro': 'Choir',
+    'electronica': 'Live Electronics'
+};
+
+function findInstrumentMatch(inputStr) {
+    const cleanStr = inputStr.trim().toLowerCase();
+    if (!cleanStr) return null;
+
+    const translatedName = SpanishToEnglishInstruments[cleanStr] || cleanStr;
+    const target = translatedName.toLowerCase();
+
+    // 1. Exact match on variant (case-insensitive)
+    let match = allInstruments.find(item => item.variant && item.variant.toLowerCase() === target);
+    if (match) return match;
+
+    // 2. Exact match on name (case-insensitive)
+    match = allInstruments.find(item => item.name && item.name.toLowerCase() === target);
+    if (match) return match;
+
+    // 3. Substring match on variant (case-insensitive)
+    match = allInstruments.find(item => item.variant && item.variant.toLowerCase().includes(target));
+    if (match) return match;
+
+    // 4. Substring match on name (case-insensitive)
+    match = allInstruments.find(item => item.name && item.name.toLowerCase().includes(target));
+    if (match) return match;
+
+    return null;
+}
+
+async function loadInstruments() {
+    try {
+        const { data, error } = await supabase.from('instruments').select('*');
+        if (error) throw error;
+        if (data) {
+            allInstruments = data;
+            instrumentData = {};
+            instrumentIdMap.clear();
+
+            data.forEach(item => {
+                instrumentIdMap.set(item.id, item);
+
+                if (!instrumentData[item.family]) {
+                    instrumentData[item.family] = {};
+                }
+                if (!instrumentData[item.family][item.name]) {
+                    instrumentData[item.family][item.name] = [];
+                }
+                if (item.variant) {
+                    instrumentData[item.family][item.name].push(item);
+                }
+            });
+            renderWizInstrumentMenu();
+        }
+    } catch (err) {
+        console.error("Error loading instruments:", err);
+    }
+}
+
+function renderWizInstrumentMenu() {
+    const list = document.getElementById('wiz-instrument-list');
+    if (!list) return;
+    list.innerHTML = Object.keys(instrumentData).map(f => {
+        const names = Object.keys(instrumentData[f]);
+        return `
+            <div class="cascade-item">${f}
+                <div class="cascade-submenu">
+                    ${names.map(n => {
+                        const variants = instrumentData[f][n];
+                        if (variants.length > 0) {
+                            return `
+                                <div class="cascade-item">${n}
+                                    <div class="cascade-submenu">
+                                        ${variants.map(vObj => {
+                                            const v = vObj.variant;
+                                            const displayName = v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`;
+                                            return `
+                                                <div class="cascade-item" onclick='window.addWizInstrumentTag(${vObj.id}, ${JSON.stringify(displayName)})'>${v}</div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            const instObj = allInstruments.find(item => item.family === f && item.name === n && !item.variant);
+                            const instId = instObj ? instObj.id : null;
+                            if (instId) {
+                                return `<div class="cascade-item" onclick='window.addWizInstrumentTag(${instId}, ${JSON.stringify(n)})'>${n}</div>`;
+                            }
+                            return '';
+                        }
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.toggleWizInstrumentList = () => {
+    const m = document.getElementById('wiz-instrument-list');
+    if (!m) return;
+    const isOpen = m.style.display === 'block';
+    m.style.display = isOpen ? 'none' : 'block';
+    const btn = document.getElementById('wiz-instrument-btn');
+    if (btn) {
+        btn.style.borderColor = isOpen ? '' : 'rgba(229,115,115,0.7)';
+    }
+};
+
+window.addWizInstrumentTag = (instId, displayName) => {
+    if (selectedWizInstruments.has(instId)) return;
+    selectedWizInstruments.add(instId);
+
+    const container = document.getElementById('wiz-tags-container');
+    if (!container) return;
+
+    const tagHtml = `
+        <div class="tag-item bg-salmon/20 text-salmon px-3 py-1.5 rounded-full text-[11px] flex items-center gap-2" data-inst-id="${instId}">
+            <span>${displayName}</span>
+            <span class="cursor-pointer font-bold text-xs hover:text-white" onclick="window.removeWizInstrumentTag(${instId})">×</span>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', tagHtml);
+
+    // Hide dropdown list
+    const m = document.getElementById('wiz-instrument-list');
+    if (m) m.style.display = 'none';
+    const btn = document.getElementById('wiz-instrument-btn');
+    if (btn) btn.style.borderColor = '';
+
+    updateWizInstrumentButtonLabel();
+};
+
+window.removeWizInstrumentTag = (instId) => {
+    selectedWizInstruments.delete(instId);
+    const container = document.getElementById('wiz-tags-container');
+    if (container) {
+        const tagEl = container.querySelector(`[data-inst-id="${instId}"]`);
+        if (tagEl) tagEl.remove();
+    }
+    updateWizInstrumentButtonLabel();
+};
+
+function updateWizInstrumentButtonLabel() {
+    const selText = document.getElementById('wiz-selected-instrument-text');
+    if (!selText) return;
+
+    if (selectedWizInstruments.size === 0) {
+        selText.textContent = "Browse Instruments...";
+    } else if (selectedWizInstruments.size === 1) {
+        const firstId = [...selectedWizInstruments][0];
+        const inst = instrumentIdMap.get(firstId);
+        if (inst) {
+            const v = inst.variant;
+            const n = inst.name;
+            const displayName = v ? (v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`) : n;
+            selText.textContent = displayName;
+        } else {
+            selText.textContent = "1 Instrument Selected";
+        }
+    } else {
+        selText.textContent = `${selectedWizInstruments.size} Instruments Selected`;
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('wiz-cascade-wrapper');
+    const m = document.getElementById('wiz-instrument-list');
+    if (wrapper && !wrapper.contains(e.target) && m && m.style.display === 'block') {
+        m.style.display = 'none';
+        const btn = document.getElementById('wiz-instrument-btn');
+        if (btn) btn.style.borderColor = '';
+    }
+});
 
 async function init() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -14,6 +246,7 @@ async function init() {
     await loadStats();
     await loadValidations();
     await loadMyWorks();
+    await loadInstruments();
 
     // Show default section
     const hash = window.location.hash.substring(1) || 'overview';
@@ -454,18 +687,41 @@ window.saveWork = async () => {
     btn.textContent = 'Saving...';
     btn.disabled = true;
 
-    const { error } = await supabase.from('works').insert(payload);
+    const { data: insertedWork, error } = await supabase
+        .from('works')
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) {
+        btn.textContent = 'Submit to Archive';
+        btn.disabled = false;
+        alert('Error saving work: ' + error.message);
+        return;
+    }
+
+    if (insertedWork && selectedWizInstruments.size > 0) {
+        const relationPayloads = [...selectedWizInstruments].map(instId => ({
+            work_id: insertedWork.id,
+            instrument_id: instId,
+            quantity: 1
+        }));
+
+        const { error: relError } = await supabase
+            .from('work_instruments')
+            .insert(relationPayloads);
+
+        if (relError) {
+            console.error("Error saving work instruments relations:", relError);
+            alert("Work was saved, but there was an error linking the instruments: " + relError.message);
+        }
+    }
 
     btn.textContent = 'Submit to Archive';
     btn.disabled = false;
-
-    if (error) {
-        alert('Error saving work: ' + error.message);
-    } else {
-        closeWorkModal();
-        await loadStats();
-        await loadMyWorks();
-    }
+    closeWorkModal();
+    await loadStats();
+    await loadMyWorks();
 };
 
 document.addEventListener('DOMContentLoaded', init);
@@ -488,7 +744,21 @@ window.handleExcelUpload = async (event) => {
     reader.onload = function(e) {
         try {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+            let workbook;
+            
+            const isCSV = file.name.toLowerCase().endsWith('.csv');
+            if (isCSV) {
+                let decodedText;
+                try {
+                    decodedText = new TextDecoder('utf-8', { fatal: true }).decode(data);
+                } catch (err) {
+                    decodedText = new TextDecoder('windows-1252').decode(data);
+                }
+                workbook = XLSX.read(decodedText, { type: 'string' });
+            } else {
+                workbook = XLSX.read(data, { type: 'array' });
+            }
+            
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
@@ -535,8 +805,9 @@ window.handleExcelUpload = async (event) => {
                 'performers': 'w-numperf',
                 'combinacion': 'w-combination',
                 'combination': 'w-combination',
-                'instrumentacion': 'w-combination',
-                'instrumentation': 'w-combination',
+                'instrumentacion': 'instrumentos',
+                'instrumentation': 'instrumentos',
+                'instrumentos': 'instrumentos',
                 'solista': 'w-soloist',
                 'soloist': 'w-soloist',
                 'preparaciones': 'w-preparations',
@@ -592,6 +863,12 @@ window.handleExcelUpload = async (event) => {
                 'additional info': 'w-additional',
             };
 
+            const tagsContainer = document.getElementById('wiz-tags-container');
+            // Clear previous instruments
+            selectedWizInstruments.clear();
+            if (tagsContainer) tagsContainer.innerHTML = '';
+            updateWizInstrumentButtonLabel();
+
             // Loop through all keys in the row
             for (const key in row) {
                 const normKey = normalize(key);
@@ -608,6 +885,24 @@ window.handleExcelUpload = async (event) => {
                     document.getElementById('w-elec-no').checked = !isYes;
                     // Trigger the toggle fields event manually
                     document.getElementById('electronics-fields').style.display = isYes ? 'block' : 'none';
+                    fieldsFilledCount++;
+                } else if (target === 'instrumentos') {
+                    // Custom handler for instruments list
+                    const combinationEl = document.getElementById('w-combination');
+                    if (combinationEl) {
+                        combinationEl.value = val;
+                    }
+                    
+                    const parts = val.toString().split(',').map(p => p.trim()).filter(Boolean);
+                    parts.forEach(part => {
+                        const matchedInst = findInstrumentMatch(part);
+                        if (matchedInst) {
+                            const v = matchedInst.variant;
+                            const n = matchedInst.name;
+                            const displayName = v ? (v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`) : n;
+                            window.addWizInstrumentTag(matchedInst.id, displayName);
+                        }
+                    });
                     fieldsFilledCount++;
                 } else {
                     const el = document.getElementById(target);

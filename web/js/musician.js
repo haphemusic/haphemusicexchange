@@ -303,7 +303,21 @@ window.processCSV = (event) => {
     reader.onload = async function(e) {
         try {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+            let workbook;
+            
+            const isCSV = file.name.toLowerCase().endsWith('.csv');
+            if (isCSV) {
+                let decodedText;
+                try {
+                    decodedText = new TextDecoder('utf-8', { fatal: true }).decode(data);
+                } catch (err) {
+                    decodedText = new TextDecoder('windows-1252').decode(data);
+                }
+                workbook = XLSX.read(decodedText, { type: 'string' });
+            } else {
+                workbook = XLSX.read(data, { type: 'array' });
+            }
+            
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
@@ -415,97 +429,6 @@ window.processCSV = (event) => {
     reader.readAsArrayBuffer(file);
 };
 
-window.processCSV = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: async function (results) {
-            const rows = results.data;
-            let successCount = 0;
-            let failCount = 0;
-
-            alert(`Processing ${rows.length} rows. Please wait...`);
-
-            for (const row of rows) {
-                // Find work_id by title
-                const title = row['Work Title'] || row['Title'] || row['work_title'];
-                if (!title) { failCount++; continue; }
-
-                let workId;
-                const { data: works } = await supabase
-                    .from('works')
-                    .select('id')
-                    .ilike('title', '%' + title + '%')
-                    .limit(1);
-
-                if (!works || works.length === 0) {
-                    console.log(`Work not found, creating: ${title}`);
-                    const { data: newWork, error: newWorkError } = await supabase
-                        .from('works')
-                        .insert({ title: title, status: 'pending' })
-                        .select('id')
-                        .single();
-
-                    if (newWorkError || !newWork) {
-                        console.error(`Failed to create work ${title}:`, newWorkError);
-                        failCount++;
-                        continue;
-                    }
-                    workId = newWork.id;
-                } else {
-                    workId = works[0].id;
-                }
-
-                // Format date if needed, basic check
-                let perfDate = row['Performance Date'] || row['Date'] || row['performance_date'];
-                if (perfDate && perfDate.includes('/')) {
-                    // Try to convert DD/MM/YYYY to YYYY-MM-DD
-                    const parts = perfDate.split('/');
-                    if (parts.length === 3 && parts[2].length === 4) {
-                        perfDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                    }
-                }
-
-                const { error } = await supabase
-                    .from('performances')
-                    .insert({
-                        work_id: workId,
-                        performer_id: currentUser.id,
-                        performance_date: perfDate || null,
-                        event_name: row['Event / Festival Name'] || row['Event'] || null,
-                        venue: row['Venue'] || null,
-                        city: row['City'] || null,
-                        country: row['Country'] || null,
-                        premiere_status: row['Premiere Status'] || 'Standard Performance',
-                        ensemble_name: row['Ensemble / Soloist Name'] || row['Ensemble'] || null,
-                        conductor: row['Conductor'] || null,
-                        recording_link: row['Live Recording Link'] || row['Link'] || null,
-                        photo_link: row['Photo / Poster'] || null,
-                        program_notes: row['Program Notes (Used)'] || row['Notes'] || null,
-                        performance_note: row['Performance Note'] || row['Feedback'] || null,
-                        status: 'pending'
-                    });
-
-                if (error) {
-                    console.error("Error inserting:", error);
-                    failCount++;
-                } else {
-                    successCount++;
-                }
-            }
-
-            alert(`CSV Import Complete!\nSuccessfully imported: ${successCount}\nFailed: ${failCount} (Usually because the Work Title was not found in the archive).`);
-            await loadStats();
-            await loadSubmissions();
-
-            // Reset input
-            event.target.value = '';
-        }
-    });
-};
 
 function showSection(sectionId) {
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));

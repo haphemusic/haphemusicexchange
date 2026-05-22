@@ -214,6 +214,73 @@
         }
         .step-dot.done { background: #E57373; }
         .step-dot.active { background: #E57373; transform: scale(1.4); }
+
+        /* Cascade Menu (for instrument selector) */
+        .cascade-wrapper { position: relative; }
+        .cascade-menu {
+            display: none;
+            position: absolute;
+            margin-top: 8px;
+            z-index: 9999;
+            min-width: 100%;
+            background: #0d1c2d;
+            border: 1px solid rgba(229, 115, 115, 0.4);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            padding: 8px 0;
+            backdrop-filter: blur(25px);
+            animation: slideDown 0.2s ease-out;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .cascade-item {
+            padding: 12px 16px;
+            color: #d4e4fa;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .cascade-item:hover {
+            background: rgba(229, 115, 115, 0.15);
+            color: #E57373;
+        }
+        .cascade-item::after {
+            content: '›';
+            font-size: 16px;
+            color: rgba(212,228,250,0.4);
+            display: none;
+        }
+        .cascade-item:has(.cascade-submenu)::after {
+            display: block;
+        }
+        .cascade-submenu {
+            display: none;
+            position: absolute;
+            top: -8px;
+            left: 100%;
+            margin-left: 2px;
+            min-width: 240px;
+            background: #0d1c2d;
+            border: 1px solid rgba(229, 115, 115, 0.4);
+            border-radius: 12px;
+            padding: 8px 0;
+            box-shadow: 20px 20px 50px rgba(0,0,0,0.8);
+            z-index: 10000;
+            animation: slideRight 0.15s ease-out;
+        }
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .cascade-item:hover > .cascade-submenu {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-surface-container-lowest text-on-surface font-sans flex h-screen overflow-hidden">
@@ -424,7 +491,7 @@
 
     <!-- WORK REGISTRATION MODAL (Wizard) -->
     <div id="work-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
-        <div class="glass-panel w-full max-w-2xl rounded-3xl overflow-hidden" style="max-height:90vh;display:flex;flex-direction:column">
+        <div class="glass-panel w-full max-w-4xl rounded-3xl overflow-hidden" style="max-height:90vh;display:flex;flex-direction:column">
 
             <!-- Header -->
             <div style="padding:28px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.07)">
@@ -530,8 +597,15 @@
                         <input class="wiz-input" id="w-combination" type="text" placeholder="e.g. String Quartet, Woodwind Quintet">
                     </div>
                     <div class="wiz-field">
-                        <label class="wiz-label">Detailed Instrumentation</label>
-                        <input class="wiz-input" id="w-instrumentation" type="text" placeholder="Fl, Cl in Bb, Pno, Vln, Vc">
+                        <label class="wiz-label">Detailed Instrumentation (Select Hierarchy)</label>
+                        <div class="cascade-wrapper" id="wiz-cascade-wrapper" style="max-width: 320px;">
+                            <button id="wiz-instrument-btn" type="button" onclick="window.toggleWizInstrumentList()" class="wiz-input text-left flex justify-between items-center bg-surface-container-low border border-white/10 rounded-xl px-4 text-white focus:border-salmon transition-all">
+                                <span id="wiz-selected-instrument-text">Browse Instruments...</span>
+                                <span class="material-symbols-outlined text-slate-500">list</span>
+                            </button>
+                            <div id="wiz-instrument-list" class="cascade-menu" style="position: absolute; width: 100%; z-index: 9999;"></div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-3" id="wiz-tags-container"></div>
                     </div>
                     <div class="wiz-field">
                         <label class="wiz-label">Soloist Instrument</label>
