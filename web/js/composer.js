@@ -935,6 +935,539 @@ window.handleExcelUpload = async (event) => {
     reader.readAsArrayBuffer(file);
 };
 
+// ── Bulk Import Works (Up to 100 Rows) ──────────────────────────────
+let parsedWorks = [];
+
+const CATEGORY_MAP = {
+    'solo':      'solo',
+    'dúo':       'duo',
+    'duo':       'duo',
+    'trío':      'trio',
+    'trio':      'trio',
+    'cuarteto':  'chamber',
+    'ensemble':  'ensemble',
+    'coral':     'ensemble',
+    'orquesta':  'orchestra',
+    'vocal':     'other',
+    'escénica':  'other',
+    'escenica':  'other',
+};
+
+const INSTR_MAP = {
+    'vla':       'Viola',
+    'fl':        'Flute',
+    'flauta':    'Flute',
+    'fl en sol': 'Flute',
+    'fl/baja':   'Flute',
+    'flbaja':    'Flute',
+    'flautin':   'Piccolo',
+    'cl':        'Clarinet',
+    'clarinete': 'Clarinet',
+    'cl b':      'Bass Clarinet',
+    'cl bajo':   'Bass Clarinet',
+    'ob':        'Oboe',
+    'oboe':      'Oboe',
+    'fg':        'Bassoon',
+    'fagot':     'Bassoon',
+    'vln':       'Violin',
+    'violin':    'Violin',
+    'violín':    'Violin',
+    'vcl':       'Cello',
+    'vcl solo':  'Cello',
+    'violonchelo': 'Cello',
+    'viola':     'Viola',
+    'vla sola':  'Viola',
+    'contrabajo': 'Double Bass',
+    'pno':       'Piano',
+    'piano':     'Piano',
+    'pno solo':  'Piano',
+    'arp':       'Harp',
+    'arpa':      'Harp',
+    'guit':      'Classical Guitar',
+    'guitarra':  'Classical Guitar',
+    'aco':       'Accordion',
+    'acordeon':  'Accordion',
+    'sax':       'Saxophone',
+    'sax alto':  'Saxophone',
+    'sax ten':   'Saxophone',
+    'sax sop':   'Saxophone',
+    'sax bar':   'Saxophone',
+    'tpa':       'Horn',
+    'trompa':    'Horn',
+    'tpt':       'Trumpet',
+    'trompeta':  'Trumpet',
+    'tbn':       'Trombone',
+    'trombon':   'Trombone',
+    'tuba':      'Tuba/Euphonium',
+    'bombardino':'Tuba/Euphonium',
+    'fiscorno':  'Trumpet',
+    'txistu':    'Flute',
+    'perc':      'Percussion',
+    'perc sola': 'Percussion',
+    'marimba':   'Marimba',
+    'marimba sola': 'Marimba',
+    'vibr':      'Vibraphone',
+    'vibrafono': 'Vibraphone',
+    'vibr sola': 'Vibraphone',
+    'sop':       'Soprano',
+    'soprano':   'Soprano',
+    'msop':      'Mezzo',
+    'mezzosoprano': 'Mezzo',
+    'cto':       'Contralto',
+    'contralto': 'Contralto',
+    'tenor':     'Tenor',
+    'baritono':  'Baritone',
+    'bajo':      'Bass',
+    'voz':       'Soprano',
+    'voz femenina': 'Soprano',
+    'coro':      'Choir',
+    'cuarteto de cuerda': 'String Quartet',
+    'cuarteto de sax': 'Saxophone',
+    'cuarteto sax': 'Saxophone',
+};
+
+function normString(str) {
+    if (!str) return '';
+    return str.toString().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function parseDurationBulk(raw) {
+    if (!raw || raw === 'N/D' || raw.toString().trim() === '') return null;
+    const first = raw.toString().split('-')[0];
+    const m = first.match(/(\d+)'(?:(\d+)'')?/);
+    if (!m) {
+        const parsedFloat = parseFloat(first);
+        return isNaN(parsedFloat) ? null : parsedFloat;
+    }
+    const mins = parseInt(m[1]);
+    const secs = m[2] ? parseInt(m[2]) : 0;
+    return Math.round((mins + secs / 60) * 100) / 100;
+}
+
+function parseYearBulk(raw) {
+    if (!raw || raw === 'N/D') return null;
+    const m = raw.toString().match(/(\d{4})/);
+    return m ? parseInt(m[1]) : null;
+}
+
+function parseDateBulk(raw) {
+    if (!raw || raw === 'N/D' || raw.toString().toLowerCase().includes('n/d')) return null;
+    const m = raw.toString().trim().match(/^(\d{1,2})-(\d{2})-(\d{4})$/);
+    if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    return null;
+}
+
+function cleanFieldBulk(val) {
+    if (!val || val.toString().trim() === 'N/D' || val.toString().trim() === '-' || val.toString().trim() === '') return null;
+    return val.toString().trim();
+}
+
+function findInstrumentIdBulk(raw, instrumentsList) {
+    const cleanRaw = normString(raw);
+    if (!cleanRaw) return null;
+
+    const withoutNum = cleanRaw.replace(/^\d+\s+/, '').trim();
+
+    const candidates = [withoutNum, cleanRaw];
+    let englishName = null;
+    for (const c of candidates) {
+        if (INSTR_MAP[c]) { englishName = INSTR_MAP[c]; break; }
+        const key = Object.keys(INSTR_MAP).find(k => c.includes(k) || k.includes(c));
+        if (key) { englishName = INSTR_MAP[key]; break; }
+    }
+    if (!englishName) englishName = withoutNum;
+
+    const target = englishName.toLowerCase();
+
+    let match = instrumentsList.find(i => i.variant && i.variant.toLowerCase() === target);
+    if (match) return match;
+    match = instrumentsList.find(i => i.name && i.name.toLowerCase() === target);
+    if (match) return match;
+    match = instrumentsList.find(i => i.variant && i.variant.toLowerCase().includes(target));
+    if (match) return match;
+    match = instrumentsList.find(i => i.name && i.name.toLowerCase().includes(target));
+    if (match) return match;
+    match = instrumentsList.find(i => i.name && target.includes(i.name.toLowerCase()));
+    if (match) return match;
+
+    return null;
+}
+
+function parseInstrumentsFieldBulk(rawField, instrumentsList) {
+    if (!rawField || rawField === 'N/D' || rawField === '-') return { instruments: [], unmatched: [] };
+    
+    const parts = rawField.toString().split(',').map(p => p.trim()).filter(Boolean);
+    const matched = [];
+    const unmatched = [];
+    
+    for (const part of parts) {
+        if (part.split(' ').length > 5) continue;
+        if (/actor|pianista|grupo|grupos|músicos|voces|intérprete|solista\s|banda\s|orquesta\s|cuerda\s|dispositivo/i.test(part)) continue;
+        
+        const inst = findInstrumentIdBulk(part, instrumentsList);
+        if (inst) {
+            matched.push(inst);
+        } else {
+            unmatched.push(part);
+        }
+    }
+    return { instruments: matched, unmatched };
+}
+
+window.handleBulkUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            let workbook;
+            const isCSV = file.name.toLowerCase().endsWith('.csv');
+            if (isCSV) {
+                let decodedText;
+                try {
+                    decodedText = new TextDecoder('utf-8', { fatal: true }).decode(data);
+                } catch (err) {
+                    decodedText = new TextDecoder('windows-1252').decode(data);
+                }
+                workbook = XLSX.read(decodedText, { type: 'string' });
+            } else {
+                workbook = XLSX.read(data, { type: 'array' });
+            }
+
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+            if (!jsonData || jsonData.length === 0) {
+                alert("The spreadsheet seems to be empty.");
+                return;
+            }
+
+            const rowsToProcess = jsonData.slice(0, 100);
+            const firstRow = rowsToProcess[0];
+            const columnMapping = {};
+            const availableHeaders = Object.keys(firstRow);
+
+            const mappings = {
+                title: ['titulo original', 'titulo', 'title', 'nombre obra'],
+                subtitle: ['version/subtitulo', 'subtítulo', 'subtitulo', 'version', 'subtitle', 'versión'],
+                year: ['ano', 'año', 'anio', 'year', 'fecha creacion'],
+                duration_minutes: ['duracion', 'duración', 'duration', 'tiempo'],
+                scoring_category: ['categoria de scoring', 'categoría', 'categoria', 'scoring', 'category', 'tipo de obra'],
+                instruments_field: ['instrumentacion detallada', 'instrumentación', 'instrumentacion', 'instrumentos', 'instrumentation', 'plantilla'],
+                premiere_date: ['fecha de estreno', 'fecha estreno', 'estreno fecha', 'premiere date'],
+                premiere_venue: ['lugar de estreno', 'lugar estreno', 'estreno lugar', 'premiere venue'],
+                premiere_city: ['ciudad de estreno', 'ciudad estreno', 'estreno ciudad', 'premiere city'],
+                premiere_performers: ['interpretes de estreno', 'interpretes del estreno', 'interpretes estreno', 'estreno interpretes', 'premiere performers', 'interpretes'],
+                commissioned_by: ['encargo', 'commission', 'encargos / ayudas', 'encargos'],
+                notes: ['notas', 'comentarios', 'notes', 'comments', 'notas adicionales']
+            };
+
+            const matchedHeadersInfo = {};
+            for (const fieldKey in mappings) {
+                const searchKeys = mappings[fieldKey];
+                const matchedHeader = availableHeaders.find(h => {
+                    const normH = normString(h);
+                    return searchKeys.some(sk => normH === sk || normH.includes(sk));
+                });
+                if (matchedHeader) {
+                    columnMapping[fieldKey] = matchedHeader;
+                    matchedHeadersInfo[fieldKey] = matchedHeader;
+                }
+            }
+
+            parsedWorks = rowsToProcess.map((row, idx) => {
+                const rawTitle = row[columnMapping.title] || '';
+                const rawSubtitle = row[columnMapping.subtitle] || '';
+                const rawYear = row[columnMapping.year] || '';
+                const rawDuration = row[columnMapping.duration_minutes] || '';
+                const rawCategory = row[columnMapping.scoring_category] || '';
+                const rawInstruments = row[columnMapping.instruments_field] || '';
+                const rawPremDate = row[columnMapping.premiere_date] || '';
+                const rawPremVenue = row[columnMapping.premiere_venue] || '';
+                const rawPremCity = row[columnMapping.premiere_city] || '';
+                const rawPremPerformers = row[columnMapping.premiere_performers] || '';
+                const rawCommission = row[columnMapping.commissioned_by] || '';
+                const rawNotes = row[columnMapping.notes] || '';
+
+                const title = cleanFieldBulk(rawTitle);
+                const subtitle = cleanFieldBulk(rawSubtitle);
+                const year = parseYearBulk(rawYear);
+                const duration = parseDurationBulk(rawDuration);
+                const rawCatClean = cleanFieldBulk(rawCategory);
+                const scoring_category = rawCatClean ? (CATEGORY_MAP[normString(rawCatClean)] || 'other') : 'other';
+                
+                const { instruments, unmatched } = parseInstrumentsFieldBulk(rawInstruments, allInstruments);
+
+                const errors = [];
+                if (!title) errors.push("Missing Title");
+                if (!year) errors.push("Missing Year");
+
+                return {
+                    id: idx,
+                    title,
+                    subtitle,
+                    year,
+                    duration_minutes: duration,
+                    scoring_category,
+                    performer_combination: cleanFieldBulk(rawInstruments),
+                    premiere_date: parseDateBulk(rawPremDate),
+                    premiere_venue: cleanFieldBulk(rawPremVenue),
+                    premiere_city: cleanFieldBulk(rawPremCity),
+                    premiere_performers: cleanFieldBulk(rawPremPerformers),
+                    commissioned_by: cleanFieldBulk(rawCommission),
+                    program_notes: cleanFieldBulk(rawNotes),
+                    instruments,
+                    unmatched,
+                    errors,
+                    rawInstrumentsText: rawInstruments
+                };
+            });
+
+            renderBulkPreview(matchedHeadersInfo);
+
+        } catch (err) {
+            console.error("Error loading bulk spreadsheet:", err);
+            alert("Error parsing the file. Please verify it is a valid CSV/Excel file.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+function renderBulkPreview(matchedHeadersInfo = {}) {
+    const uploadZone = document.getElementById('bulk-upload-zone');
+    const container = document.getElementById('bulk-preview-container');
+    const tbody = document.getElementById('bulk-preview-tbody');
+    const mappingGrid = document.getElementById('bulk-column-mapping-grid');
+
+    uploadZone.classList.add('hidden');
+    container.classList.remove('hidden');
+
+    mappingGrid.innerHTML = '';
+    const fieldsToDisplay = [
+        { label: 'Title', key: 'title' },
+        { label: 'Subtitle', key: 'subtitle' },
+        { label: 'Year', key: 'year' },
+        { label: 'Duration', key: 'duration_minutes' },
+        { label: 'Category', key: 'scoring_category' },
+        { label: 'Instruments', key: 'instruments_field' }
+    ];
+
+    fieldsToDisplay.forEach(item => {
+        const matchedColumn = matchedHeadersInfo[item.key];
+        const displayVal = matchedColumn ? matchedColumn : 'Not mapped';
+        const isMatched = !!matchedColumn;
+        
+        mappingGrid.innerHTML += `
+            <div class="p-3 rounded-2xl bg-white/[0.02] border ${isMatched ? 'border-emerald-500/20 bg-emerald-500/[0.01]' : 'border-white/5'} flex flex-col gap-1">
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">${item.label}</span>
+                <span class="font-semibold ${isMatched ? 'text-emerald-400' : 'text-slate-400'} truncate" title="${displayVal}">${displayVal}</span>
+            </div>
+        `;
+    });
+
+    updateBulkSummaryCounts();
+
+    tbody.innerHTML = '';
+    if (parsedWorks.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-12 text-slate-500 font-sans">
+                    All rows removed. Drag and drop another file to start over.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    parsedWorks.forEach((w, index) => {
+        const matchedBadges = w.instruments.map(inst => {
+            const label = inst.variant ? `${inst.name} (${inst.variant})` : inst.name;
+            return `<span class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-md text-[10px] font-medium" title="Database match">${label}</span>`;
+        }).join(' ');
+
+        const unmatchedBadges = w.unmatched.map(u => {
+            return `<span class="bg-rose-500/10 border border-rose-500/30 text-rose-400 px-2 py-0.5 rounded-md text-[10px] font-medium" title="Unmatched acronym / term">${u}</span>`;
+        }).join(' ');
+
+        const allBadges = [matchedBadges, unmatchedBadges].filter(Boolean).join(' ');
+
+        let statusHtml = '';
+        if (w.errors.length > 0) {
+            statusHtml = `
+                <div class="flex flex-col items-center gap-0.5 text-rose-400" title="${w.errors.join(', ')}">
+                    <span class="material-symbols-outlined text-[18px]">error</span>
+                    <span class="text-[9px] font-semibold uppercase">Error</span>
+                </div>
+            `;
+        } else {
+            statusHtml = `
+                <div class="flex flex-col items-center gap-0.5 text-emerald-400">
+                    <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                    <span class="text-[9px] font-semibold uppercase">Ready</span>
+                </div>
+            `;
+        }
+
+        tbody.innerHTML += `
+            <tr class="hover:bg-white/[0.01] transition-all">
+                <td class="py-4 px-6 text-center text-slate-500 font-mono">${index + 1}</td>
+                <td class="py-4 px-4">
+                    <div class="font-bold text-white max-w-[250px] truncate" title="${w.title || 'Untitled'}">${w.title || '<span class="text-rose-400 italic">Untitled</span>'}</div>
+                    <div class="text-[10px] text-slate-500 truncate max-w-[250px]" title="${w.subtitle || ''}">${w.subtitle || '—'}</div>
+                </td>
+                <td class="py-4 px-4 text-center font-mono font-semibold">${w.year || '<span class="text-rose-400">—</span>'}</td>
+                <td class="py-4 px-4 text-center font-mono text-slate-400">${w.duration_minutes ? w.duration_minutes + "'" : '—'}</td>
+                <td class="py-4 px-4">
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-white/5 border border-white/10 text-slate-300">${w.scoring_category}</span>
+                </td>
+                <td class="py-4 px-4">
+                    <div class="flex flex-wrap gap-1.5 max-w-[320px]">
+                        ${allBadges || `<span class="text-slate-500 italic text-[11px]">${w.rawInstrumentsText || '—'}</span>`}
+                    </div>
+                </td>
+                <td class="py-4 px-4 text-center">${statusHtml}</td>
+                <td class="py-4 px-6 text-center">
+                    <button onclick="window.removeBulkRow(${w.id})" class="text-slate-500 hover:text-rose-400 transition-colors p-1" title="Delete Row">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function updateBulkSummaryCounts() {
+    const totalCount = parsedWorks.length;
+    const readyCount = parsedWorks.filter(w => w.errors.length === 0).length;
+    const errorCount = parsedWorks.filter(w => w.errors.length > 0).length;
+
+    document.getElementById('bulk-preview-count-label').textContent = `${totalCount} works loaded`;
+    document.getElementById('bulk-action-total').textContent = totalCount;
+    document.getElementById('bulk-action-ready').textContent = readyCount;
+    document.getElementById('bulk-action-errors').textContent = errorCount;
+
+    const submitBtn = document.getElementById('bulk-import-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = readyCount === 0;
+    }
+}
+
+window.removeBulkRow = (id) => {
+    parsedWorks = parsedWorks.filter(w => w.id !== id);
+    renderBulkPreview();
+};
+
+window.clearBulkImport = () => {
+    parsedWorks = [];
+    document.getElementById('bulk-file-input').value = '';
+    document.getElementById('bulk-preview-container').classList.add('hidden');
+    document.getElementById('bulk-upload-zone').classList.remove('hidden');
+};
+
+window.submitBulkImport = async () => {
+    const validWorks = parsedWorks.filter(w => w.errors.length === 0);
+    if (validWorks.length === 0) return;
+
+    const btn = document.getElementById('bulk-import-submit-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[16px]">sync</span> Saving...`;
+    btn.disabled = true;
+
+    try {
+        const payloads = validWorks.map(w => ({
+            title: w.title,
+            subtitle: w.subtitle,
+            year: w.year,
+            duration_minutes: w.duration_minutes,
+            scoring_category: w.scoring_category,
+            performer_combination: w.performer_combination,
+            premiere_date: w.premiere_date,
+            premiere_venue: w.premiere_venue,
+            premiere_city: w.premiere_city,
+            premiere_performers: w.premiere_performers,
+            commissioned_by: w.commissioned_by,
+            program_notes: w.program_notes,
+            composer_id: null,
+            submitted_by: currentUser.id,
+            status: 'validated'
+        }));
+
+        const { data: insertedWorks, error } = await supabase
+            .from('works')
+            .insert(payloads)
+            .select();
+
+        if (error) throw error;
+
+        if (insertedWorks && insertedWorks.length > 0) {
+            const relationPayloads = [];
+            const unmatchedInstrumentsSet = new Set();
+
+            insertedWorks.forEach((insertedWork, idx) => {
+                const orig = validWorks.find(w => w.title === insertedWork.title && w.year === insertedWork.year) || validWorks[idx];
+                if (orig) {
+                    orig.instruments.forEach(inst => {
+                        relationPayloads.push({
+                            work_id: insertedWork.id,
+                            instrument_id: inst.id,
+                            quantity: 1
+                        });
+                    });
+                    orig.unmatched.forEach(u => unmatchedInstrumentsSet.add(u));
+                }
+            });
+
+            if (relationPayloads.length > 0) {
+                const { error: relError } = await supabase
+                    .from('work_instruments')
+                    .insert(relationPayloads);
+                if (relError) {
+                    console.error("Error bulk-saving work instruments relations:", relError);
+                }
+            }
+
+            document.getElementById('bulk-report-success-count').textContent = insertedWorks.length;
+            const unmatchedListEl = document.getElementById('bulk-report-unmatched-list');
+            const unmatchedWrapper = document.getElementById('bulk-report-unmatched-wrapper');
+
+            if (unmatchedInstrumentsSet.size > 0) {
+                unmatchedListEl.innerHTML = [...unmatchedInstrumentsSet].map(u => {
+                    return `<span class="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-2 py-0.5 rounded-md text-[10px] font-medium">${u}</span>`;
+                }).join(' ');
+                unmatchedWrapper.classList.remove('hidden');
+            } else {
+                unmatchedWrapper.classList.add('hidden');
+            }
+
+            document.getElementById('bulk-report-modal').classList.remove('hidden');
+            document.getElementById('bulk-report-modal').classList.add('flex');
+        }
+
+    } catch (err) {
+        console.error("Error saving bulk import:", err);
+        alert("Error saving compositions: " + err.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
+
+window.closeBulkReportModal = () => {
+    document.getElementById('bulk-report-modal').classList.remove('flex');
+    document.getElementById('bulk-report-modal').classList.add('hidden');
+    window.clearBulkImport();
+    
+    loadStats();
+    loadMyWorks();
+    
+    showSection('my-works');
+    window.location.hash = 'my-works';
+};
+
 // ── Saved & Likes Dashboard Section ───────────────────────────────
 let activeTab = 'saved';
 window.activeInteractionTab = activeTab;

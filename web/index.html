@@ -350,10 +350,10 @@
     <section class="space-y-8">
         <div class="flex justify-between items-end border-b border-white/5 pb-4">
             <div>
-                <h2 class="font-headline-lg text-3xl font-medium text-white">Recent Works</h2>
-                <p class="text-tertiary-container">New additions to the digital catalog</p>
+                <h2 id="works-section-title" class="font-headline-lg text-3xl font-medium text-white">Recent Works</h2>
+                <p id="works-section-subtitle" class="text-tertiary-container">New additions to the digital catalog</p>
             </div>
-            <a class="text-salmon text-xs font-semibold hover:underline tracking-widest flex items-center gap-1" href="#" onclick="return window.viewAllWorks()">VIEW ALL <span class="material-symbols-outlined text-[14px]">arrow_forward</span></a>
+            <a id="view-all-btn" class="text-salmon text-xs font-semibold hover:underline tracking-widest flex items-center gap-1" href="#" onclick="return window.viewAllWorks()">VIEW ALL <span class="material-symbols-outlined text-[14px]">arrow_forward</span></a>
         </div>
         <div id="works-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         <div id="no-results" class="hidden text-center py-20 bg-white/5 rounded-3xl border border-white/10">
@@ -361,6 +361,8 @@
             <h3 class="text-xl text-white font-medium">No works found in the archive</h3>
             <p id="no-results-text" class="text-slate-400">Try adjusting your filters or check that the Supabase `works` table has records.</p>
         </div>
+        <!-- Pagination Controls -->
+        <div id="pagination-controls" style="display:none"></div>
     </section>
 
     <!-- About Section -->
@@ -773,9 +775,28 @@
         }
     });
 
+    // ── Pagination State ─────────────────────────────────────
+    let isViewAllActive = false;
+    let currentCatalogPage = 1;
+    const WORKS_PER_PAGE = 50;
+    const DEFAULT_PREVIEW_COUNT = 6;
+
     window.viewAllWorks = () => {
+        isViewAllActive = true;
+        currentCatalogPage = 1;
+        window._viewAllClickedExplicitly = true;
+        // Hide VIEW ALL button once activated
+        const viewAllBtn = document.getElementById('view-all-btn');
+        if (viewAllBtn) viewAllBtn.style.display = 'none';
         filterWorks();
         return false;
+    };
+
+    window.changeCatalogPage = (page) => {
+        currentCatalogPage = page;
+        renderResults(window._lastFilteredWorks || []);
+        // Smooth scroll to results section
+        document.getElementById('works-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     window.filterWorks = async () => {
@@ -800,6 +821,25 @@
         const co = document.getElementById('country-select').value;
         const ge = document.getElementById('gender-select').value.toLowerCase();
         const selectedTags = [...document.querySelectorAll('#tags-container .tag-item')].map(tag => tag.dataset.tag.toLowerCase());
+
+        // Auto-activate view all if any filter/search is applied
+        const searchTermCheck = document.getElementById('work-search-input')?.value.trim() || '';
+        const hasActiveFilters = searchTermCheck || co || ge || selectedTags.length > 0
+            || yf > 0 || yt < 9999;
+        if (hasActiveFilters && !isViewAllActive) {
+            isViewAllActive = true;
+            currentCatalogPage = 1;
+            const viewAllBtn = document.getElementById('view-all-btn');
+            if (viewAllBtn) viewAllBtn.style.display = 'none';
+        }
+        // If filters were cleared and we were in view-all mode triggered only by filters,
+        // allow a reset back to preview mode (unless the user explicitly clicked VIEW ALL)
+        if (!hasActiveFilters && !window._viewAllClickedExplicitly) {
+            isViewAllActive = false;
+            currentCatalogPage = 1;
+            const viewAllBtn = document.getElementById('view-all-btn');
+            if (viewAllBtn) viewAllBtn.style.display = '';
+        }
 
         // Fetch all validated works from Supabase joining both classical composers and submitting user profiles
         const { data: works, error } = await supabase
@@ -895,16 +935,131 @@
     function renderResults(works) {
         const grid = document.getElementById('works-grid');
         const noResults = document.getElementById('no-results');
-        
+        const paginationEl = document.getElementById('pagination-controls');
+        const sectionTitle = document.getElementById('works-section-title');
+        const sectionSubtitle = document.getElementById('works-section-subtitle');
+
+        // Cache filtered works for page changes
+        window._lastFilteredWorks = works;
+
         if (!works || works.length === 0) {
             grid.innerHTML = '';
+            if (paginationEl) paginationEl.style.display = 'none';
             if (noResults) noResults.classList.remove('hidden');
             return;
         }
-        
+
         if (noResults) noResults.classList.add('hidden');
-        
-        grid.innerHTML = works.map(w => {
+
+        let worksToRender;
+
+        if (!isViewAllActive) {
+            // ── Default mode: show 6 preview cards ─────────────────
+            worksToRender = works.slice(0, DEFAULT_PREVIEW_COUNT);
+            if (paginationEl) paginationEl.style.display = 'none';
+            if (sectionTitle) sectionTitle.textContent = 'Recent Works';
+            if (sectionSubtitle) sectionSubtitle.textContent = 'New additions to the digital catalog';
+        } else {
+            // ── View All / Search mode: 50 per page ─────────────────
+            const totalWorks = works.length;
+            const totalPages = Math.ceil(totalWorks / WORKS_PER_PAGE);
+            currentCatalogPage = Math.max(1, Math.min(currentCatalogPage, totalPages));
+            const start = (currentCatalogPage - 1) * WORKS_PER_PAGE;
+            worksToRender = works.slice(start, start + WORKS_PER_PAGE);
+
+            // Update section heading
+            if (sectionTitle) sectionTitle.textContent = 'Complete Archive';
+            if (sectionSubtitle) sectionSubtitle.textContent = `Showing ${start + 1}–${Math.min(start + WORKS_PER_PAGE, totalWorks)} of ${totalWorks} works`;
+
+            // Render pagination bar
+            if (paginationEl) {
+                if (totalPages <= 1) {
+                    paginationEl.style.display = 'none';
+                } else {
+                    paginationEl.style.display = 'flex';
+                    paginationEl.style.cssText = `
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 28px 0 8px;
+                        flex-wrap: wrap;
+                    `;
+                    // Build page buttons
+                    const buttons = [];
+
+                    // Prev button
+                    buttons.push(`
+                        <button onclick="window.changeCatalogPage(${currentCatalogPage - 1})" ${
+                            currentCatalogPage === 1 ? 'disabled' : ''
+                        } style="
+                            background: ${currentCatalogPage === 1 ? 'rgba(255,255,255,0.03)' : 'rgba(229,115,115,0.12)'};
+                            border: 1px solid ${currentCatalogPage === 1 ? 'rgba(255,255,255,0.06)' : 'rgba(229,115,115,0.3)'};
+                            color: ${currentCatalogPage === 1 ? '#4a5568' : '#E57373'};
+                            width: 38px; height: 38px; border-radius: 10px;
+                            cursor: ${currentCatalogPage === 1 ? 'not-allowed' : 'pointer'};
+                            display: flex; align-items: center; justify-content: center;
+                            font-size: 18px; transition: all 0.2s;
+                        ">
+                            <span class="material-symbols-outlined" style="font-size:18px">chevron_left</span>
+                        </button>
+                    `);
+
+                    // Page number buttons
+                    // Smart windowing: always show first, last, current ±2
+                    const pageSet = new Set();
+                    pageSet.add(1);
+                    pageSet.add(totalPages);
+                    for (let p = Math.max(1, currentCatalogPage - 2); p <= Math.min(totalPages, currentCatalogPage + 2); p++) {
+                        pageSet.add(p);
+                    }
+                    const sortedPages = [...pageSet].sort((a, b) => a - b);
+
+                    let prevPage = null;
+                    for (const page of sortedPages) {
+                        if (prevPage !== null && page - prevPage > 1) {
+                            // Ellipsis
+                            buttons.push(`<span style="color:#4a5568;font-size:13px;padding:0 4px">···</span>`);
+                        }
+                        const isActive = page === currentCatalogPage;
+                        buttons.push(`
+                            <button onclick="window.changeCatalogPage(${page})" style="
+                                background: ${isActive ? 'rgba(229,115,115,0.2)' : 'rgba(255,255,255,0.04)'};
+                                border: 1px solid ${isActive ? 'rgba(229,115,115,0.55)' : 'rgba(255,255,255,0.08)'};
+                                color: ${isActive ? '#E57373' : '#8b96ac'};
+                                width: 38px; height: 38px; border-radius: 10px;
+                                cursor: pointer; font-size: 13px; font-weight: ${isActive ? '700' : '500'};
+                                display: flex; align-items: center; justify-content: center;
+                                transition: all 0.2s;
+                                box-shadow: ${isActive ? '0 0 12px rgba(229,115,115,0.18)' : 'none'};
+                            ">${page}</button>
+                        `);
+                        prevPage = page;
+                    }
+
+                    // Next button
+                    buttons.push(`
+                        <button onclick="window.changeCatalogPage(${currentCatalogPage + 1})" ${
+                            currentCatalogPage === totalPages ? 'disabled' : ''
+                        } style="
+                            background: ${currentCatalogPage === totalPages ? 'rgba(255,255,255,0.03)' : 'rgba(229,115,115,0.12)'};
+                            border: 1px solid ${currentCatalogPage === totalPages ? 'rgba(255,255,255,0.06)' : 'rgba(229,115,115,0.3)'};
+                            color: ${currentCatalogPage === totalPages ? '#4a5568' : '#E57373'};
+                            width: 38px; height: 38px; border-radius: 10px;
+                            cursor: ${currentCatalogPage === totalPages ? 'not-allowed' : 'pointer'};
+                            display: flex; align-items: center; justify-content: center;
+                            font-size: 18px; transition: all 0.2s;
+                        ">
+                            <span class="material-symbols-outlined" style="font-size:18px">chevron_right</span>
+                        </button>
+                    `);
+
+                    paginationEl.innerHTML = buttons.join('');
+                }
+            }
+        }
+
+        grid.innerHTML = worksToRender.map(w => {
             const composerName = w.composer?.name
                 || (w.submitter ? `${w.submitter.first_name || ''} ${w.submitter.last_name || ''}`.trim() : '')
                 || 'Unknown Composer';
