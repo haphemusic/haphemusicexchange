@@ -386,7 +386,7 @@ async function loadMyWorks() {
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px">
                 ${w.status === 'validated'
                     ? '<span class="material-symbols-outlined text-emerald-400" style="font-size:16px" title="Validated & Public">verified</span>'
-                    : w.status === 'hidden'
+                    : w.status === 'pending'
                     ? '<span class="material-symbols-outlined text-slate-400" style="font-size:16px" title="Not Visible (Hidden)">visibility_off</span>'
                     : '<span class="material-symbols-outlined text-amber-400" style="font-size:16px" title="Pending Validation">pending</span>'
                 }
@@ -737,7 +737,7 @@ window.editWork = (wEncoded) => {
     // Populate visibility
     const visibleCheckbox = document.getElementById('w-visible');
     if (visibleCheckbox) {
-        visibleCheckbox.checked = (w.status !== 'hidden');
+        visibleCheckbox.checked = (w.status === 'validated');
     }
 
     // Populate instruments
@@ -867,7 +867,7 @@ window.saveWork = async () => {
 
         composer_id:   null,         // Only set for catalog works via composers table
         submitted_by:  currentUser.id,
-        status:        document.getElementById('w-visible').checked ? 'validated' : 'hidden',
+        status:        document.getElementById('w-visible').checked ? 'validated' : 'pending',
     };
 
     const btn = document.getElementById('wiz-submit');

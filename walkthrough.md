@@ -135,3 +135,12 @@ This document details the user search, direct messaging, navigation/About sectio
    - In Session B, reply to Session A's comment or upvote a comment.
    - Observe Session A's notifications bell lighting up instantly. Click the bell to view details.
 6. **Smooth Scroll**: Click **Community** or **About** in the navigation bar to test smooth-scroll targeting.
+
+---
+
+## 6. "Visible in Public Catalog" Button / Checkbox Fix
+
+#### [MODIFY] [composer.js](file:///c:/Users/gutis/Desktop/proyecto/web/js/composer.js)
+- **Mapped Status to Pending**: Changed the unchecked status code value in the Javascript payload from `'hidden'` to `'pending'`. This aligns with the database's check constraint `CHECK (status IN ('pending', 'validated', 'rejected'))`, preventing database errors when saving works with public visibility disabled.
+- **Checkbox Initialization**: Corrected `editWork` checkbox population logic to evaluate `(w.status === 'validated')` to determine if the checkbox should be checked.
+- **Dashboard Status Render**: Displayed works with status `'pending'` using the gray `visibility_off` badge icon in the user's composer dashboard, indicating they are hidden/private.
