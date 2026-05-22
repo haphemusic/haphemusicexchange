@@ -119,13 +119,14 @@ function actualizarInterfaz(user, role, isComplete) {
         const statusColor = isComplete ? 'text-emerald-400' : 'text-amber-400';
         const statusIcon = isComplete ? 'check_circle' : 'warning';
         const statusText = isComplete ? 'Verified Profile' : 'Incomplete Profile';
+        const displayRole = (normRole === 'musician' || normRole === 'drums' || normRole === 'group') ? 'Performer' : role;
 
         loginBtn.outerHTML = `
             <div class="flex items-center gap-4">
                 <a href="${profileUrl}" class="flex flex-col items-end hidden md:flex hover:opacity-80 transition-all group">
                     <div class="flex items-center gap-1">
                         <span class="material-symbols-outlined text-[14px] ${statusColor}">${statusIcon}</span>
-                        <span class="text-[10px] font-bold text-salmon uppercase tracking-widest group-hover:text-white transition-colors">${role}</span>
+                        <span class="text-[10px] font-bold text-salmon uppercase tracking-widest group-hover:text-white transition-colors">${displayRole}</span>
                     </div>
                     <span class="text-[10px] ${statusColor} font-medium">${statusText}</span>
                 </a>
