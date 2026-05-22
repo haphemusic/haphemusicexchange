@@ -668,8 +668,10 @@
                         <input class="wiz-input" id="w-catalogue" type="text" placeholder="Op. 7, BWV 143, etc.">
                     </div>
                     <div class="wiz-field flex items-center gap-2 mt-4" style="display:flex;align-items:center;gap:8px;margin-top:16px">
-                        <input type="checkbox" id="w-visible" checked style="width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:#0d1c2d;accent-color:#E57373;cursor:pointer">
-                        <label for="w-visible" class="wiz-label" style="margin:0;font-size:12px;color:#d4e4fa;cursor:pointer">Visible in Public Catalog</label>
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin:0" onclick="const cb=document.getElementById('w-visible'); if(cb) cb.checked = !cb.checked;">
+                            <input type="checkbox" id="w-visible" onclick="event.stopPropagation()" style="width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:#0d1c2d;accent-color:#E57373;cursor:pointer;appearance:auto;-webkit-appearance:checkbox;">
+                            <span class="wiz-label" style="margin:0;font-size:12px;color:#d4e4fa;cursor:pointer;display:inline-block;line-height:1">Hide from Public Catalog</span>
+                        </label>
                     </div>
                 </div>
 
@@ -699,7 +701,7 @@
                         <input class="wiz-input" id="w-combination" type="text" placeholder="e.g. String Quartet, Woodwind Quintet">
                     </div>
                     <div class="wiz-field">
-                        <label class="wiz-label">Detailed Instrumentation (Select Hierarchy)</label>
+                        <label class="wiz-label">Detailed Instrumentation (Select Hierarchy) <span style="color:#E57373">*</span></label>
                         <div class="cascade-wrapper" id="wiz-cascade-wrapper" style="max-width: 320px;">
                             <button id="wiz-instrument-btn" type="button" onclick="window.toggleWizInstrumentList()" class="wiz-input text-left flex justify-between items-center bg-surface-container-low border border-white/10 rounded-xl px-4 text-white focus:border-salmon transition-all">
                                 <span id="wiz-selected-instrument-text">Browse Instruments...</span>

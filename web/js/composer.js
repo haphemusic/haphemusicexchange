@@ -297,6 +297,14 @@ async function loadStats() {
     }
 }
 
+function formatWorkStatus(status) {
+    if (!status) return 'Unknown';
+    if (status === 'validated') return 'Public Work';
+    if (status === 'pending') return 'Not Public Work';
+    if (status === 'rejected') return 'Rejected';
+    return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 async function loadValidations() {
     const container = document.getElementById('validations-list');
     const { data: validations, error } = await supabase
@@ -381,13 +389,13 @@ async function loadMyWorks() {
                     hover:border-white/10 transition-all">
             <div style="flex:1;min-width:0;cursor:pointer" onclick="window.showWorkDetail('${encodeURIComponent(JSON.stringify(w))}')">
                 <p class="text-xs font-bold text-white group-hover:text-salmon transition-colors truncate">${w.title}</p>
-                <p class="text-[9px] text-slate-500 uppercase tracking-widest">${w.year || '—'} &bull; ${w.status}</p>
+                <p class="text-[9px] text-slate-500 uppercase tracking-widest">${w.year || '—'} &bull; ${formatWorkStatus(w.status)}</p>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px">
                 ${w.status === 'validated'
-                    ? '<span class="material-symbols-outlined text-emerald-400" style="font-size:16px" title="Validated & Public">verified</span>'
+                    ? '<span class="material-symbols-outlined text-emerald-400" style="font-size:16px" title="Public Work">verified</span>'
                     : w.status === 'pending'
-                    ? '<span class="material-symbols-outlined text-slate-400" style="font-size:16px" title="Not Visible (Hidden)">visibility_off</span>'
+                    ? '<span class="material-symbols-outlined text-slate-400" style="font-size:16px" title="Not Public Work">visibility_off</span>'
                     : '<span class="material-symbols-outlined text-amber-400" style="font-size:16px" title="Pending Validation">pending</span>'
                 }
                 <button onclick="window.editWork('${encodeURIComponent(JSON.stringify(w))}')"
@@ -464,6 +472,7 @@ window.showWorkDetail = (wEncoded) => {
         <p class="modal-section-title">General Information</p>
         ${row('Duration', w.duration_minutes ? `${w.duration_minutes} min` : null)}
         ${row('Catalogue number', w.catalogue_number)}
+        ${row('Status', formatWorkStatus(w.status))}
         ${row('Score status', w.score_status)}
         ${row('Availability', w.score_availability?.replace('_',' '))}
         ${row('Publisher', w.publisher)}
@@ -635,7 +644,7 @@ function resetWorkForm() {
     document.getElementById('w-additional').value = '';
 
     const visibleCheckbox = document.getElementById('w-visible');
-    if (visibleCheckbox) visibleCheckbox.checked = true;
+    if (visibleCheckbox) visibleCheckbox.checked = false;
 
     selectedWizInstruments.clear();
     const tagsContainer = document.getElementById('wiz-tags-container');
@@ -737,7 +746,7 @@ window.editWork = (wEncoded) => {
     // Populate visibility
     const visibleCheckbox = document.getElementById('w-visible');
     if (visibleCheckbox) {
-        visibleCheckbox.checked = (w.status === 'validated');
+        visibleCheckbox.checked = (w.status !== 'validated');
     }
 
     // Populate instruments
@@ -790,6 +799,11 @@ window.wizStep = (dir) => {
     if (dir === 1 && currentWizStep === 1) {
         const scoring = document.getElementById('w-scoring').value;
         if (!scoring) { document.getElementById('w-scoring').focus(); return alert('Please select a scoring category.'); }
+        if (selectedWizInstruments.size === 0) {
+            const instBtn = document.getElementById('wiz-instrument-btn');
+            if (instBtn) instBtn.focus();
+            return alert('Please select at least one instrument.');
+        }
     }
 
     const next = currentWizStep + dir;
@@ -822,6 +836,11 @@ window.saveWork = async () => {
     const title = document.getElementById('w-title').value.trim();
     const year  = parseInt(document.getElementById('w-year').value) || null;
     if (!title || !year) return alert('Title and Year are required.');
+    if (selectedWizInstruments.size === 0) {
+        const instBtn = document.getElementById('wiz-instrument-btn');
+        if (instBtn) instBtn.focus();
+        return alert('Please select at least one instrument before saving.');
+    }
 
     const tagsRaw = document.getElementById('w-tags').value;
     const styleTags = tagsRaw
@@ -867,11 +886,12 @@ window.saveWork = async () => {
 
         composer_id:   null,         // Only set for catalog works via composers table
         submitted_by:  currentUser.id,
-        status:        document.getElementById('w-visible').checked ? 'validated' : 'pending',
+        status:        document.getElementById('w-visible').checked ? 'pending' : 'validated',
     };
 
     const btn = document.getElementById('wiz-submit');
-    btn.textContent = 'Saving...';
+    const originalBtnHtml = btn.innerHTML;
+    btn.innerHTML = 'Saving...';
     btn.disabled = true;
 
     let savedWork = null;
@@ -897,9 +917,7 @@ window.saveWork = async () => {
     }
 
     if (saveError) {
-        btn.innerHTML = editingWorkId 
-            ? '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">save</span> Save Changes'
-            : '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">upload</span> Submit to Archive';
+        btn.innerHTML = originalBtnHtml;
         btn.disabled = false;
         alert('Error saving work: ' + saveError.message);
         return;
