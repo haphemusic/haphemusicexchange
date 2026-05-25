@@ -1181,8 +1181,12 @@
         return `<span class="work-badge ${cls}"><span class="material-symbols-outlined" style="font-size:11px">${icon}</span>${cat}</span>`;
     }
     function diffBadge(d) {
+        // Feature deactivated temporarily: return empty string so it is not visible to the user
+        return '';
+        /* Original logic:
         if (!d) return '';
         return `<span class="work-badge badge-diff-${d.toLowerCase()}">${d}</span>`;
+        */
     }
 
     function displayRoleLabel(role) {
@@ -1194,7 +1198,7 @@
     }
 
     // ── Work Detail Modal ──────────────────────────────────────────
-    window.openWorkModal = (wEncoded, instEncoded) => {
+    window.openWorkModal = (wEncoded, instEncoded, shouldPushState = true) => {
         const w    = JSON.parse(decodeURIComponent(wEncoded));
         const inst = JSON.parse(decodeURIComponent(instEncoded));
         const composerName = w.composer?.name
@@ -1202,6 +1206,13 @@
             || 'Unknown Composer';
         const country      = w.composer?.nationality || w.submitter?.nationality || '—';
         const instruments  = inst.map(i => i.name).filter(Boolean).join(', ') || '—';
+
+        if (shouldPushState) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('work', w.id);
+            // If user parameter is also present, we can preserve it, or prioritize work
+            window.history.pushState({ workId: w.id }, '', url.toString());
+        }
 
         const row = (label, value) => value
             ? `<div class="modal-row"><span class="modal-label">${label}</span><span class="modal-value">${value}</span></div>`
@@ -1307,8 +1318,13 @@
         document.getElementById('work-modal-backdrop').classList.add('open');
     };
 
-    window.closeWorkModal = () => {
+    window.closeWorkModal = (shouldPushState = true) => {
         document.getElementById('work-modal-backdrop').classList.remove('open');
+        if (shouldPushState) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('work');
+            window.history.pushState({}, '', url.toString());
+        }
     };
 
     // ── User Search & Public Profiles ────────────────────────────────
@@ -1389,7 +1405,7 @@
         }, 300);
     };
 
-    window.openUserProfile = async (userId) => {
+    window.openUserProfile = async (userId, shouldPushState = true) => {
         // Hide search modal first
         window.closeUserSearchModal();
 
@@ -1397,6 +1413,14 @@
         const contentEl = document.getElementById('user-profile-content');
         
         backdrop.style.display = 'flex';
+
+        // Update the URL query parameter ?user=userId without reloading
+        if (shouldPushState) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('user', userId);
+            window.history.pushState({ profileUserId: userId }, '', url.toString());
+        }
+
         contentEl.innerHTML = `
             <div class="flex flex-col items-center justify-center py-20">
                 <span class="material-symbols-outlined text-[36px] animate-spin text-salmon mb-2">sync</span>
@@ -1577,10 +1601,10 @@
                     <!-- Statuses and Details Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Bio and Artistic info -->
-                        <div class="space-y-4">
+                        <div class="space-y-4 min-w-0">
                             <div>
                                 <h4 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bio</h4>
-                                <p class="text-sm text-slate-300 leading-relaxed mt-1 whitespace-pre-line">${profile.bio || 'No biography written yet.'}</p>
+                                <p class="text-sm text-slate-300 leading-relaxed mt-1 whitespace-pre-line" style="overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; max-height: 250px; overflow-y: auto; padding-right: 4px;">${profile.bio || 'No biography written yet.'}</p>
                             </div>
                             ${profile.main_aesthetic ? `
                             <div>
@@ -1672,8 +1696,13 @@
         }
     };
 
-    window.closeUserProfile = () => {
+    window.closeUserProfile = (shouldPushState = true) => {
         document.getElementById('user-profile-backdrop').style.display = 'none';
+        if (shouldPushState) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('user');
+            window.history.pushState({}, '', url.toString());
+        }
     };
 
     // ── Direct Messaging System ──────────────────────────────────────
@@ -3200,6 +3229,64 @@
         });
         document.getElementById('delete-confirm-backdrop').addEventListener('click', e => {
             if (e.target === document.getElementById('delete-confirm-backdrop')) window.closeDeleteConfirmModal();
+        });
+
+        // ── Check if ?user= userId or ?work= workId exists on load ───────
+        const initialParams = new URLSearchParams(window.location.search);
+        const initialUserId = initialParams.get('user');
+        if (initialUserId) {
+            window.openUserProfile(initialUserId, false);
+        }
+        const initialWorkId = initialParams.get('work');
+        if (initialWorkId) {
+            // Since works are loaded asynchronously from loadData(), we wait until they are loaded
+            const checkAndOpenWork = () => {
+                if (typeof allWorks !== 'undefined' && allWorks.length > 0) {
+                    const targetWork = allWorks.find(w => String(w.id) === String(initialWorkId));
+                    if (targetWork) {
+                        const targetInsts = workInstruments.filter(wi => wi.work_id === targetWork.id).map(wi => {
+                            return allInstruments.find(i => i.id === wi.instrument_id) || {};
+                        });
+                        const wData = encodeURIComponent(JSON.stringify(targetWork)).replace(/'/g, "%27");
+                        const instData = encodeURIComponent(JSON.stringify(targetInsts)).replace(/'/g, "%27");
+                        window.openWorkModal(wData, instData, false);
+                    }
+                } else {
+                    setTimeout(checkAndOpenWork, 100);
+                }
+            };
+            checkAndOpenWork();
+        }
+
+        // ── Handle browser back / forward navigation ────────────────────
+        window.addEventListener('popstate', (event) => {
+            const currentParams = new URLSearchParams(window.location.search);
+            
+            // Handle User Profile Sync
+            const currentUserId = currentParams.get('user');
+            if (currentUserId) {
+                window.openUserProfile(currentUserId, false);
+            } else {
+                window.closeUserProfile(false);
+            }
+
+            // Handle Work Sync
+            const currentWorkId = currentParams.get('work');
+            if (currentWorkId) {
+                if (typeof allWorks !== 'undefined' && allWorks.length > 0) {
+                    const targetWork = allWorks.find(w => String(w.id) === String(currentWorkId));
+                    if (targetWork) {
+                        const targetInsts = workInstruments.filter(wi => wi.work_id === targetWork.id).map(wi => {
+                            return allInstruments.find(i => i.id === wi.instrument_id) || {};
+                        });
+                        const wData = encodeURIComponent(JSON.stringify(targetWork)).replace(/'/g, "%27");
+                        const instData = encodeURIComponent(JSON.stringify(targetInsts)).replace(/'/g, "%27");
+                        window.openWorkModal(wData, instData, false);
+                    }
+                }
+            } else {
+                window.closeWorkModal(false);
+            }
         });
     });
 </script>

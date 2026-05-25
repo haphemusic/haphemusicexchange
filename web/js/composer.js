@@ -603,7 +603,7 @@ function resetWorkForm() {
     // Reset submit button text
     const submitBtn = document.getElementById('wiz-submit');
     if (submitBtn) {
-        submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">upload</span> Submit to Archive';
+        submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">save</span> Finish / Save';
     }
 
     document.getElementById('w-title').value = '';
@@ -614,7 +614,7 @@ function resetWorkForm() {
 
     document.getElementById('w-scoring').value = '';
     document.getElementById('w-numperf').value = '';
-    document.getElementById('w-combination').value = '';
+
     document.getElementById('w-soloist').value = '';
     document.getElementById('w-preparations').value = '';
     document.getElementById('w-space').value = '';
@@ -686,7 +686,7 @@ window.editWork = (wEncoded) => {
 
     const submitBtn = document.getElementById('wiz-submit');
     if (submitBtn) {
-        submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">save</span> Save Changes';
+        submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">save</span> Finish / Save';
     }
 
     // Hide Excel importer trigger
@@ -705,7 +705,7 @@ window.editWork = (wEncoded) => {
     // Populate scoring
     document.getElementById('w-scoring').value = w.scoring_category || '';
     document.getElementById('w-numperf').value = w.num_performers || '';
-    document.getElementById('w-combination').value = w.performer_combination || '';
+
     document.getElementById('w-soloist').value = w.soloist_instrument || '';
     document.getElementById('w-preparations').value = w.unusual_preparations || '';
     document.getElementById('w-space').value = w.space_requirements || '';
@@ -805,6 +805,14 @@ window.wizStep = (dir) => {
             return alert('Please select at least one instrument.');
         }
     }
+    // Validate step 3 (Premiere Date)
+    if (dir === 1 && currentWizStep === 3) {
+        const premDate = document.getElementById('w-prem-date').value;
+        if (!premDate) {
+            document.getElementById('w-prem-date').focus();
+            return alert('Premiere date is required.');
+        }
+    }
 
     const next = currentWizStep + dir;
     if (next < 0 || next >= TOTAL_STEPS) return;
@@ -827,7 +835,7 @@ function updateWizUI() {
     // Buttons
     document.getElementById('wiz-back').style.display   = currentWizStep > 0 ? 'block' : 'none';
     document.getElementById('wiz-next').style.display   = currentWizStep < TOTAL_STEPS - 1 ? 'block' : 'none';
-    document.getElementById('wiz-submit').style.display = currentWizStep === TOTAL_STEPS - 1 ? 'block' : 'none';
+    document.getElementById('wiz-submit').style.display = 'block';
     // Scroll body to top
     document.getElementById('wiz-body').scrollTop = 0;
 }
@@ -835,11 +843,37 @@ function updateWizUI() {
 window.saveWork = async () => {
     const title = document.getElementById('w-title').value.trim();
     const year  = parseInt(document.getElementById('w-year').value) || null;
-    if (!title || !year) return alert('Title and Year are required.');
+    const premDate = document.getElementById('w-prem-date').value;
+    
+    if (!title || !year) {
+        currentWizStep = 0;
+        updateWizUI();
+        if (!title) document.getElementById('w-title').focus();
+        else document.getElementById('w-year').focus();
+        return alert('Title and Year are required.');
+    }
+
+    const scoring = document.getElementById('w-scoring').value;
+    if (!scoring) {
+        currentWizStep = 1;
+        updateWizUI();
+        document.getElementById('w-scoring').focus();
+        return alert('Please select a scoring category.');
+    }
+
     if (selectedWizInstruments.size === 0) {
+        currentWizStep = 1;
+        updateWizUI();
         const instBtn = document.getElementById('wiz-instrument-btn');
         if (instBtn) instBtn.focus();
         return alert('Please select at least one instrument before saving.');
+    }
+
+    if (!premDate) {
+        currentWizStep = 3;
+        updateWizUI();
+        document.getElementById('w-prem-date').focus();
+        return alert('Premiere date is required.');
     }
 
     const tagsRaw = document.getElementById('w-tags').value;
@@ -856,7 +890,6 @@ window.saveWork = async () => {
 
         scoring_category:      document.getElementById('w-scoring').value              || null,
         num_performers:        parseInt(document.getElementById('w-numperf').value)    || null,
-        performer_combination: document.getElementById('w-combination').value.trim()   || null,
         soloist_instrument:    document.getElementById('w-soloist').value.trim()       || null,
         unusual_preparations:  document.getElementById('w-preparations').value.trim()  || null,
         space_requirements:    document.getElementById('w-space').value.trim()         || null,
@@ -865,7 +898,7 @@ window.saveWork = async () => {
         electronics_type:      document.getElementById('w-elec-type').value            || null,
         electronics_software:  document.getElementById('w-elec-software').value.trim() || null,
 
-        premiere_date:         document.getElementById('w-prem-date').value            || null,
+        premiere_date:         premDate || null,
         premiere_city:         document.getElementById('w-prem-city').value.trim()     || null,
         premiere_venue:        document.getElementById('w-prem-venue').value.trim()    || null,
         premiere_performers:   document.getElementById('w-prem-performers').value.trim() || null,
@@ -950,7 +983,7 @@ window.saveWork = async () => {
         }
     }
 
-    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">upload</span> Submit to Archive';
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">save</span> Finish / Save';
     btn.disabled = false;
     closeWorkModal();
     await loadStats();
@@ -1036,8 +1069,7 @@ window.handleExcelUpload = async (event) => {
                 'category': 'w-scoring',
                 'num performers': 'w-numperf',
                 'performers': 'w-numperf',
-                'combinacion': 'w-combination',
-                'combination': 'w-combination',
+
                 'instrumentacion': 'instrumentos',
                 'instrumentation': 'instrumentos',
                 'instrumentos': 'instrumentos',
@@ -1121,11 +1153,7 @@ window.handleExcelUpload = async (event) => {
                     fieldsFilledCount++;
                 } else if (target === 'instrumentos') {
                     // Custom handler for instruments list
-                    const combinationEl = document.getElementById('w-combination');
-                    if (combinationEl) {
-                        combinationEl.value = val;
-                    }
-                    
+
                     const parts = val.toString().split(',').map(p => p.trim()).filter(Boolean);
                     parts.forEach(part => {
                         const matchedInst = findInstrumentMatch(part);

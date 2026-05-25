@@ -40,18 +40,28 @@ async function loadProfile() {
         }
     }
 
-    // Rellenar todos los campos del formulario
-    const textFields = [
-        'first_name', 'last_name', 'username', 'bio', 'nationality', 'gender', 'country_of_birth', 'place_of_birth', 'website',
+    // Populate select country dropdowns with correct pre-selected values from DB
+    const countrySelectFields = ['nationality', 'country_of_birth'];
+    const allTextFields = [
+        'first_name', 'last_name', 'username', 'bio', 'gender', 'place_of_birth', 'website',
         'main_aesthetic', 'education', 'awards', 'copyright_society',
         'soundcloud_url', 'spotify_url', 'youtube_url', 'public_contact_email',
         'residence_country'
     ];
 
-    textFields.forEach(id => {
+    allTextFields.forEach(id => {
         const el = document.getElementById(id);
         if (el && profile[id] !== undefined && profile[id] !== null) {
             el.value = profile[id];
+        }
+    });
+
+    // For country selects: set value after options are populated (via DOMContentLoaded inline script)
+    countrySelectFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && profile[id]) {
+            // Wait a tick to ensure options are populated by the inline module script
+            setTimeout(() => { el.value = profile[id]; }, 50);
         }
     });
 

@@ -511,6 +511,11 @@
                     <div class="text-xs text-slate-500 uppercase tracking-widest bg-slate-900/50 px-4 py-1.5 rounded-full border border-white/5 mt-2">
                         Supports .csv, .xlsx, .xls (Up to 100 rows)
                     </div>
+                    <div class="relative z-10 mt-2" onclick="event.stopPropagation()">
+                        <a href="plantilla_obras.csv" download="plantilla_obras.csv" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-xs font-bold uppercase tracking-wider cursor-pointer">
+                            <span class="material-symbols-outlined text-[16px]">download</span> Download Template
+                        </a>
+                    </div>
                     <input type="file" id="bulk-file-input" accept=".csv, .xlsx, .xls" class="absolute inset-0 opacity-0 cursor-pointer" onchange="window.handleBulkUpload(event)">
                 </div>
 
@@ -631,6 +636,11 @@
                         <span class="material-symbols-outlined text-salmon text-3xl mb-2">upload_file</span>
                         <p style="font-size: 12px; color: #d4e4fa; margin-bottom: 2px; font-weight: 500;">Drag & drop your spreadsheet here or click to browse</p>
                         <p style="font-size: 10px; color: rgba(212,228,250,0.4);">Supports .xlsx, .xls, .csv</p>
+                        <div class="relative z-10 mt-2" onclick="event.stopPropagation()">
+                            <a href="plantilla_obras.csv" download="plantilla_obras.csv" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer">
+                                <span class="material-symbols-outlined text-[14px]">download</span> Download Template
+                            </a>
+                        </div>
                         <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" onchange="handleExcelUpload(event)" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
                     </div>
                     <div id="excel-import-status" style="margin-top: 10px; display: none; font-size: 11px; color: #9ACD90; font-weight: 600; text-align: center; align-items: center; justify-content: center; gap: 4px;">
@@ -696,10 +706,7 @@
                             <input class="wiz-input" id="w-numperf" type="number" placeholder="e.g. 4">
                         </div>
                     </div>
-                    <div class="wiz-field">
-                        <label class="wiz-label">Combination of Performers</label>
-                        <input class="wiz-input" id="w-combination" type="text" placeholder="e.g. String Quartet, Woodwind Quintet">
-                    </div>
+
                     <div class="wiz-field">
                         <label class="wiz-label">Detailed Instrumentation (Select Hierarchy) <span style="color:#E57373">*</span></label>
                         <div class="cascade-wrapper" id="wiz-cascade-wrapper" style="max-width: 320px;">
@@ -762,8 +769,8 @@
                     <p style="color:rgba(212,228,250,0.45);font-size:12px;margin-bottom:20px">All fields in this section are optional.</p>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                         <div class="wiz-field">
-                            <label class="wiz-label">Premiere Date</label>
-                            <input class="wiz-input" id="w-prem-date" type="date">
+                            <label class="wiz-label">Premiere Date <span style="color:#E57373">*</span></label>
+                            <input class="wiz-input" id="w-prem-date" type="date" required>
                         </div>
                         <div class="wiz-field">
                             <label class="wiz-label">Premiere City</label>
@@ -808,6 +815,7 @@
                                 <option value="for_sale">For sale</option>
                                 <option value="rental">Rental</option>
                                 <option value="free_download">Free download</option>
+                                <option value="available_from_composer">Available from composer</option>
                                 <option value="not_available">Not available</option>
                             </select>
                         </div>
@@ -827,7 +835,6 @@
                                 <option value="none">None</option>
                                 <option value="live">Live</option>
                                 <option value="studio">Studio</option>
-                                <option value="midi">MIDI</option>
                             </select>
                         </div>
                     </div>
@@ -844,7 +851,7 @@
                         <input class="wiz-input" id="w-tags" type="text" placeholder="Spectralism, Minimalism, Microtonal...">
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                        <div class="wiz-field">
+                        <div class="wiz-field" style="display: none;">
                             <label class="wiz-label">Technical Difficulty</label>
                             <select class="wiz-input" id="w-difficulty">
                                 <option value="">— Select —</option>
@@ -872,8 +879,8 @@
                 <div style="flex:1"></div>
                 <button onclick="closeWorkModal()" style="padding:10px 20px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#8b96ac;font-size:14px;cursor:pointer">Cancel</button>
                 <button id="wiz-next" onclick="wizStep(1)" style="padding:10px 28px;background:#E57373;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Next →</button>
-                <button id="wiz-submit" onclick="saveWork()" style="display:none;padding:10px 28px;background:#E57373;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">
-                    <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">upload</span> Submit to Archive
+                <button id="wiz-submit" onclick="saveWork()" style="display:none;padding:10px 28px;background:#10B981;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">
+                    <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">save</span> Finish / Save
                 </button>
             </div>
         </div>
