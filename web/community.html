@@ -370,6 +370,9 @@
         const sortBy = sortSelect ? sortSelect.value : 'newest';
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const currentUserId = session ? session.user.id : null;
+
             const { data: posts, error } = await supabase
                 .from('posts')
                 .select('*')
@@ -407,6 +410,19 @@
                 console.warn("Failed to fetch votes:", vErr);
             }
 
+            let savedPostIds = [];
+            if (currentUserId) {
+                try {
+                    const { data: savedData, error: savedError } = await supabase
+                        .from('saved_posts')
+                        .select('post_id')
+                        .eq('user_id', currentUserId);
+                    if (!savedError && savedData) savedPostIds = savedData.map(item => item.post_id);
+                } catch (sErr) {
+                    console.warn('Failed to fetch saved posts:', sErr);
+                }
+            }
+
             if (sortBy === 'top') {
                 posts.sort((a, b) => {
                     const scoreA = votes.filter(v => v.post_id === a.id).reduce((acc, curr) => acc + curr.vote_type, 0);
@@ -426,6 +442,8 @@
                 const postVotes = votes.filter(v => v.post_id === p.id);
                 const score = postVotes.reduce((acc, curr) => acc + curr.vote_type, 0);
 
+                const isSaved = savedPostIds.includes(p.id);
+
                 const avatarHTML = profile.avatar_url
                     ? `<img src="${profile.avatar_url}" class="w-10 h-10 rounded-xl object-cover border border-white/10">`
                     : `<div class="w-10 h-10 rounded-xl bg-salmon/10 border border-salmon/20 flex items-center justify-center text-salmon font-bold text-sm font-sans">${initials || '?'}</div>`;
@@ -435,12 +453,31 @@
                     : '';
 
                 const externalLinkHTML = p.external_link
-                    ? `<a href="${p.external_link}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-sans font-semibold text-salmon hover:underline mt-3 bg-salmon/10 border border-salmon/20 px-2 py-1 rounded-md">` +
+                    ? `<a href="${p.external_link}" target="_blank" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 text-[10px] font-sans font-semibold text-salmon hover:underline mt-3 bg-salmon/10 border border-salmon/20 px-2 py-1 rounded-md">` +
                       `<span class="material-symbols-outlined text-[12px]">link</span> Link ↗</a>`
                     : '';
 
+                const saveButtonHTML = currentUserId
+                    ? `<button onclick="event.stopPropagation(); window.handleSavePost('${p.id}')" class="flex items-center gap-1 text-[11px] font-sans transition-colors ${isSaved ? 'text-salmon font-semibold' : 'text-slate-400 hover:text-salmon'}">
+                           <span class="material-symbols-outlined text-[14px]">${isSaved ? 'bookmark' : 'bookmark_border'}</span>
+                           ${isSaved ? 'Saved' : 'Save'}
+                       </button>`
+                    : '';
+
+                const voteWidgetHTML = currentUserId
+                    ? `<div class="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1.5 rounded-xl select-none w-fit">
+                           <button onclick="event.stopPropagation(); window.handleVote('${p.id}', 1)" class="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:text-salmon hover:bg-white/5">
+                               <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                           </button>
+                           <span class="text-sm font-bold font-mono ${score > 0 ? 'text-salmon' : score < 0 ? 'text-cyan-400' : 'text-slate-300'}">${score >= 0 ? '+' : ''}${score}</span>
+                           <button onclick="event.stopPropagation(); window.handleVote('${p.id}', -1)" class="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:text-cyan-400 hover:bg-white/5">
+                               <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
+                           </button>
+                       </div>`
+                    : `<div class="text-[12px] font-semibold ${score > 0 ? 'text-salmon' : score < 0 ? 'text-cyan-400' : 'text-slate-300'}">${score >= 0 ? '+' : ''}${score}</div>`;
+
                 return `
-                    <article class="glass-panel p-6 rounded-3xl border border-white/10 transition-all hover:border-salmon/20">
+                    <article onclick="window.openPostDetail('${p.id}')" class="glass-panel p-6 rounded-3xl border border-white/10 transition-all hover:border-salmon/20 cursor-pointer">
                         <div class="flex items-center justify-between gap-4 mb-4">
                             <div class="flex items-center gap-3">
                                 ${avatarHTML}
@@ -449,13 +486,14 @@
                                     <p class="text-[11px] text-slate-500">${commentsCount} comment${commentsCount !== 1 ? 's' : ''}</p>
                                 </div>
                             </div>
-                            <div class="text-[12px] font-semibold ${score > 0 ? 'text-salmon' : score < 0 ? 'text-cyan-400' : 'text-slate-300'}">${score >= 0 ? '+' : ''}${score}</div>
+                            ${voteWidgetHTML}
                         </div>
                         <h3 class="text-xl font-bold text-white mb-2">${p.title}</h3>
                         <p class="text-sm text-slate-300 leading-relaxed line-clamp-3">${p.content}</p>
                         ${mediaPreview}
                         <div class="mt-4 flex flex-wrap items-center gap-3">
                             ${externalLinkHTML}
+                            ${saveButtonHTML}
                         </div>
                     </article>
                 `;
@@ -468,6 +506,239 @@
         }
     };
 
+    window.openPostDetail = async (postId) => {
+        window.activePostDetailId = postId;
+        const backdrop = document.getElementById('post-detail-backdrop');
+        const contentEl = document.getElementById('post-detail-content');
+        const formContainer = document.getElementById('post-comment-form-container');
+
+        if (!backdrop || !contentEl || !formContainer) return;
+
+        backdrop.style.display = 'flex';
+        contentEl.innerHTML = `<div class="flex justify-center items-center py-20"><span class="material-symbols-outlined text-4xl animate-spin text-salmon">sync</span></div>`;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            formContainer.innerHTML = `
+                <div class="text-center py-4">
+                    <p class="text-xs text-slate-400 font-sans">Please <a href="login.html" class="text-salmon hover:underline font-bold">log in</a> to comment.</p>
+                </div>
+            `;
+        } else {
+            formContainer.innerHTML = `
+                <form onsubmit="window.handleCommentSubmit(event)" id="comment-form" class="flex gap-3">
+                    <input type="text" id="comment-input" required placeholder="Add a comment to this discussion..." class="flex-1 h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors text-sm font-sans">
+                    <button type="submit" class="w-11 h-11 bg-salmon hover:brightness-110 active:scale-95 text-white rounded-xl flex items-center justify-center transition-all shrink-0">
+                        <span class="material-symbols-outlined">send</span>
+                    </button>
+                </form>
+            `;
+        }
+
+        try {
+            const [{ data: post, error: postError }, { data: comments, error: commentsError }] = await Promise.all([
+                supabase.from('posts').select('*').eq('id', postId).single(),
+                supabase.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: true })
+            ]);
+
+            if (postError) throw postError;
+            if (commentsError) throw commentsError;
+
+            const { data: authorProfile, error: authorError } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, avatar_url')
+                .eq('id', post.author_id)
+                .single();
+
+            const authorName = authorError ? 'Anonymous User' : `${authorProfile.first_name || ''} ${authorProfile.last_name || ''}`.trim() || 'Anonymous User';
+            const authorAvatar = authorError || !authorProfile.avatar_url
+                ? `<div class="w-10 h-10 rounded-xl bg-salmon/10 border border-salmon/20 flex items-center justify-center text-salmon font-bold text-sm font-sans">${authorName.split(' ').map(w => w[0]).join('').slice(0,2) || '?'}</div>`
+                : `<img src="${authorProfile.avatar_url}" class="w-10 h-10 rounded-xl object-cover border border-white/10">`;
+
+            const commentAuthorIds = comments ? [...new Set(comments.map(c => c.author_id).filter(Boolean))] : [];
+            const commentProfiles = commentAuthorIds.length > 0
+                ? await supabase.from('profiles').select('id, first_name, last_name').in('id', commentAuthorIds)
+                : { data: [], error: null };
+            const commentProfilesMap = (commentProfiles.data || []).reduce((map, profile) => {
+                map[profile.id] = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+                return map;
+            }, {});
+
+            const commentItems = comments && comments.length > 0
+                ? comments.map(c => {
+                    const commenterName = commentProfilesMap[c.author_id] || 'Anonymous';
+                    return `
+                    <div class="glass-panel bg-white/5 border border-white/10 p-4 rounded-2xl space-y-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-white">${commenterName}</p>
+                            <span class="text-[10px] text-slate-500">${new Date(c.created_at).toLocaleString()}</span>
+                        </div>
+                        <p class="text-sm text-slate-300 leading-relaxed">${c.content}</p>
+                    </div>
+                `;
+                }).join('')
+                : `<p class="text-center text-slate-500 py-6 text-xs italic font-sans">No comments yet. Be the first to share your thoughts!</p>`;
+
+            const { data: voteData, error: voteError } = await supabase.from('votes').select('*').eq('post_id', postId);
+            const score = (!voteError && voteData) ? voteData.reduce((acc, curr) => acc + curr.vote_type, 0) : 0;
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            const isSaved = currentSession ? await (async () => {
+                const { data: savedData, error: savedError } = await supabase
+                    .from('saved_posts')
+                    .select('id')
+                    .eq('post_id', postId)
+                    .eq('user_id', currentSession.user.id)
+                    .maybeSingle();
+                return !!(savedData && !savedError);
+            })() : false;
+
+            contentEl.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            ${authorAvatar}
+                            <div>
+                                <p class="text-sm font-semibold text-white">${authorName}</p>
+                                <p class="text-[10px] text-slate-500">${new Date(post.created_at).toLocaleDateString('es-ES')}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="window.handleVote('${postId}', 1)" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:text-salmon hover:bg-white/10 transition-all">
+                                <span class="material-symbols-outlined">arrow_upward</span>
+                            </button>
+                            <button onclick="window.handleVote('${postId}', -1)" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:bg-white/10 transition-all">
+                                <span class="material-symbols-outlined">arrow_downward</span>
+                            </button>
+                            <span class="text-sm font-bold ${score > 0 ? 'text-salmon' : score < 0 ? 'text-cyan-400' : 'text-slate-300'}">${score >= 0 ? '+' : ''}${score}</span>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="space-y-3">
+                            <h2 class="text-2xl font-bold text-white">${post.title}</h2>
+                            <p class="text-sm text-slate-300 leading-relaxed">${post.content}</p>
+                            ${post.media_url ? `<img src="${post.media_url}" class="w-full rounded-3xl border border-white/10 object-cover">` : ''}
+                            ${post.external_link ? `<a href="${post.external_link}" target="_blank" onclick="event.stopPropagation()" class="inline-flex items-center gap-2 text-salmon font-semibold text-sm hover:underline">` +
+                                `<span class="material-symbols-outlined">link</span> View External Link</a>` : ''}
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button onclick="window.handleSavePost('${postId}')" class="px-4 py-2 rounded-xl ${isSaved ? 'bg-salmon/10 text-salmon border border-salmon/30' : 'bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10'} transition-all">
+                                <span class="material-symbols-outlined align-middle">${isSaved ? 'bookmark' : 'bookmark_border'}</span>
+                                ${isSaved ? 'Saved' : 'Save'}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <h3 class="text-lg font-semibold text-white">Comments</h3>
+                        ${commentItems}
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            console.error('Error opening post detail:', err);
+            contentEl.innerHTML = `<div class="text-center py-10 text-rose-400 text-xs font-sans">Unable to load discussion details.</div>`;
+        }
+    };
+
+    window.closePostDetailModal = () => {
+        const backdrop = document.getElementById('post-detail-backdrop');
+        if (backdrop) backdrop.style.display = 'none';
+        window.activePostDetailId = null;
+    };
+
+    window.handleCommentSubmit = async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('comment-input');
+        const content = input?.value.trim();
+        if (!content) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert('Please log in to comment.');
+            return;
+        }
+        const postId = window.activePostDetailId;
+        if (!postId) return;
+
+        const { error } = await supabase.from('comments').insert({
+            post_id: postId,
+            author_id: session.user.id,
+            content
+        });
+
+        if (error) {
+            alert('Error posting comment: ' + error.message);
+            return;
+        }
+
+        input.value = '';
+        await window.openPostDetail(postId);
+    };
+
+    window.handleVote = async (postId, voteType) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert('Please log in to vote.');
+            return;
+        }
+
+        const { error } = await supabase.from('votes').upsert({
+            post_id: postId,
+            user_id: session.user.id,
+            vote_type: voteType
+        }, { onConflict: ['post_id', 'user_id'] });
+
+        if (error) {
+            alert('Error voting: ' + error.message);
+            return;
+        }
+
+        await window.loadPosts();
+        if (window.activePostDetailId === postId) await window.openPostDetail(postId);
+    };
+
+    window.handleSavePost = async (postId) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert('Please log in to save posts.');
+            return;
+        }
+
+        const { data: savedData, error: existingError } = await supabase
+            .from('saved_posts')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+        if (existingError) {
+            console.warn('Error checking saved post:', existingError);
+        }
+
+        if (savedData) {
+            const { error: deleteError } = await supabase
+                .from('saved_posts')
+                .delete()
+                .eq('id', savedData.id);
+            if (deleteError) {
+                alert('Error removing saved post: ' + deleteError.message);
+                return;
+            }
+        } else {
+            const { error: insertError } = await supabase
+                .from('saved_posts')
+                .insert({
+                    post_id: postId,
+                    user_id: session.user.id
+                });
+            if (insertError) {
+                alert('Error saving post: ' + insertError.message);
+                return;
+            }
+        }
+
+        await window.loadPosts();
+        if (window.activePostDetailId === postId) await window.openPostDetail(postId);
+    };
+
     document.addEventListener('DOMContentLoaded', async () => {
         window.loadPosts();
         document.getElementById('create-post-backdrop').addEventListener('click', e => {
@@ -475,5 +746,23 @@
         });
     });
 </script>
+
+<!-- Post Detail & Comments Modal -->
+<div id="post-detail-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 99999; align-items: center; justify-content: center; padding: 24px;">
+    <div style="background: #010f1f; border: 1px solid rgba(229,115,115,0.3); border-radius: 28px; max-width: 720px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+        <button onclick="window.closePostDetailModal()" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.08); border: none; color: #d4e4fa; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;" class="hover:bg-white/15">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+        <div id="post-detail-content" style="flex: 1; overflow-y: auto; padding: 36px;" class="space-y-6"></div>
+        <div id="post-comment-form-container" style="padding: 20px 36px; border-top: 1px solid rgba(255,255,255,0.06); background: rgba(13,28,45,0.5);">
+            <form onsubmit="window.handleCommentSubmit(event)" id="comment-form" class="flex gap-3">
+                <input type="text" id="comment-input" required placeholder="Add a comment to this discussion..." class="flex-1 h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors text-sm font-sans">
+                <button type="submit" class="w-11 h-11 bg-salmon hover:brightness-110 active:scale-95 text-white rounded-xl flex items-center justify-center transition-all shrink-0">
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
 </body>
 </html>
