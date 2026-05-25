@@ -368,7 +368,7 @@
             <div style="padding: 28px 32px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.07)">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start">
                     <div>
-                        <h2 style="font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 2px">Register Interpretation</h2>
+                        <h2 id="submission-modal-title" style="font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 2px">Register Interpretation</h2>
                         <p style="font-size: 11px; color: #8b96ac; text-transform: uppercase; letter-spacing: 0.1em">Search for a validated work and fill in the performance details.</p>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -542,7 +542,7 @@
 
             <!-- Footer -->
             <div style="padding: 20px 32px; border-top: 1px solid rgba(255, 255, 255, 0.07); display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-                <button onclick="submitInterpretation()"
+                <button id="submission-submit-btn" onclick="submitInterpretation()"
                     class="flex-1 bg-salmon text-white py-3 rounded-xl font-bold hover:brightness-110 transition-all">Submit
                     for Validation</button>
                 <button onclick="closeSubmissionModal()"
