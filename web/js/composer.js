@@ -324,8 +324,8 @@ async function loadValidations() {
 
     container.innerHTML = validations.map(v => {
         const performerName = v.performer 
-            ? `${v.performer.first_name || ''} ${v.performer.last_name || ''}`.trim() || 'Performer'
-            : 'Unknown Performer';
+            ? `${v.performer.first_name || ''} ${v.performer.last_name || ''}`.trim() || 'Performer/Ensemble'
+            : 'Unknown Performer/Ensemble';
         const performerRole = v.performer?.role || 'musician';
         return `
         <div class="glass-panel p-6 rounded-3xl flex items-center gap-6 group hover:border-salmon/30 transition-all">
@@ -335,7 +335,7 @@ async function loadValidations() {
             <div class="flex-1">
                 <h4 class="font-bold text-white">${v.work?.title || 'Unknown Work'}</h4>
                 <p class="text-xs text-slate-400">Performed by: ${performerName} (${performerRole})</p>
-                <p class="text-[10px] text-slate-500 mt-1">Date: ${v.performance_date || 'N/A'} • Venue: ${v.venue || 'N/A'}, ${v.city || 'N/A'}</p>
+                <p class="text-[10px] text-slate-500 mt-1">Date: ${v.performance_date ? v.performance_date.split('-').reverse().join('/') : 'N/A'} • Venue: ${v.venue || 'N/A'}, ${v.city || 'N/A'}</p>
             </div>
             <div class="flex gap-2">
                 <button onclick="handleValidation(${v.id}, 'rejected')" class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 transition-all">
@@ -497,7 +497,7 @@ window.showWorkDetail = (wEncoded) => {
         <!-- Premiere -->
         ${w.premiere_date || w.premiere_venue ? `
         <p class="modal-section-title">Premiere</p>
-        ${row('Date', w.premiere_date)}
+        ${row('Date', w.premiere_date ? w.premiere_date.split('-').reverse().join('/') : null)}
         ${row('Venue', w.premiere_venue)}
         ${row('City', w.premiere_city)}
         ${row('Performers', w.premiere_performers)}

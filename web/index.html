@@ -1192,7 +1192,7 @@
     function displayRoleLabel(role) {
         if (!role) return 'User';
         const normalized = role.toLowerCase();
-        if (normalized === 'musician' || normalized === 'drums' || normalized === 'group') return 'Performer';
+        if (normalized === 'musician' || normalized === 'drums' || normalized === 'group') return 'Performer/Ensemble';
         if (normalized === 'composer') return 'Composer';
         return role.charAt(0).toUpperCase() + role.slice(1);
     }
@@ -1284,7 +1284,7 @@
             <!-- Premiere -->
             ${w.premiere_date || w.premiere_venue ? `
             <p class="modal-section-title">Premiere</p>
-            ${row('Date', w.premiere_date)}
+            ${row('Date', w.premiere_date ? w.premiere_date.split('-').reverse().join('/') : null)}
             ${row('Venue', w.premiere_venue)}
             ${row('City', w.premiere_city)}
             ${row('Performers', w.premiere_performers)}
@@ -1552,7 +1552,7 @@
                             ${performances.map(p => {
                                 const workTitle = p.work ? p.work.title : 'Unknown Work';
                                 const composerName = p.work && p.work.composer ? p.work.composer.name : 'Unknown';
-                                const dateStr = p.performance_date ? new Date(p.performance_date).toLocaleDateString() : '—';
+                                const dateStr = p.performance_date ? p.performance_date.split('-').reverse().join('/') : '—';
                                 return `
                                     <div class="p-4 bg-white/2 border border-white/5 rounded-2xl">
                                         <div class="flex justify-between items-start">
@@ -2245,7 +2245,7 @@
                     </div>
                 `;
 
-                const dateStr = new Date(p.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+                const dateStr = new Date(p.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
                 const avatarHTML = profile.avatar_url 
                     ? `<img src="${profile.avatar_url}" class="w-8 h-8 rounded-lg object-cover border border-white/10">`
@@ -2398,7 +2398,7 @@
                         ? `<img src="${cProfile.avatar_url}" class="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0">`
                         : `<div class="w-8 h-8 rounded-lg bg-salmon/10 border border-salmon/20 flex items-center justify-center text-salmon font-bold text-xs font-sans shrink-0">${cInitials || '?'}</div>`;
 
-                    const cDateStr = new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const cDateStr = new Date(c.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
                     const cVotes = commentVotes.filter(v => v.comment_id === c.id);
                     const cScore = cVotes.reduce((acc, curr) => acc + curr.vote_type, 0);
@@ -2527,7 +2527,7 @@
                    </button>`
                 : '';
 
-            const postDateStr = new Date(post.created_at).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const postDateStr = new Date(post.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
             const isAuthor = session && session.user.id === post.author_id;
             const deleteButtonHTML = isAuthor
@@ -3041,7 +3041,7 @@
                     ? `<img src="${profile.avatar_url}" class="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0">`
                     : `<div class="w-8 h-8 rounded-lg bg-salmon/10 border border-salmon/20 flex items-center justify-center text-salmon font-bold text-xs font-sans shrink-0">${initials || '?'}</div>`;
 
-                const dateStr = new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const dateStr = new Date(n.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
                 return `
                     <div onclick="window.handleNotificationClick('${n.id}', ${n.post_id})" class="flex gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors ${!n.is_read ? 'bg-salmon/5 border-l-2 border-salmon' : ''}">

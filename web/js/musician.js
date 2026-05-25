@@ -26,7 +26,7 @@ async function loadUserProfile() {
         .single();
 
     if (profile) {
-        const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Performer';
+        const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Performer/Ensemble';
         document.getElementById('user-name').textContent = name;
         document.getElementById('welcome-name').textContent = name;
 
@@ -119,7 +119,7 @@ async function loadSubmissions() {
             <div class="pt-2 flex justify-between">
                 <div>
                     <p class="text-[10px] text-slate-500 uppercase font-bold">Performance Date</p>
-                    <p class="text-xs text-white">${s.performance_date || 'N/A'}</p>
+                    <p class="text-xs text-white">${s.performance_date ? s.performance_date.split('-').reverse().join('/') : 'N/A'}</p>
                 </div>
                 <div class="text-right">
                     <p class="text-[10px] text-slate-500 uppercase font-bold">Location</p>
@@ -563,7 +563,7 @@ async function loadInteractions(tabType = 'saved') {
         listContainer.innerHTML = posts.map(p => {
             const author = profiles ? profiles.find(pr => pr.id === p.author_id) : null;
             const authorName = author ? `${author.first_name || ''} ${author.last_name || ''}`.trim() : 'Anonymous';
-            const dateStr = new Date(p.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+            const dateStr = new Date(p.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
             return `
                 <a href="index.html?post=${p.id}&from=musician" class="block feed-card p-5 rounded-2xl transition-all duration-300 relative group border border-white/5 hover:border-salmon/30 bg-white/5">
@@ -586,5 +586,442 @@ async function loadInteractions(tabType = 'saved') {
         listContainer.innerHTML = `<p class="col-span-full text-center text-rose-400 text-xs font-sans py-10">Error loading interaction list.</p>`;
     }
 }
+// ── Bulk Import Interpretations (Up to 100 Rows) ──────────────────────────
+let parsedPerformances = [];
+
+function normString(str) {
+    if (!str) return '';
+    return str.toString().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function cleanFieldBulk(val) {
+    if (!val || val.toString().trim() === 'N/D' || val.toString().trim() === '-' || val.toString().trim() === '') return null;
+    return val.toString().trim();
+}
+
+function parseDateBulk(raw) {
+    if (!raw || raw === 'N/D' || raw.toString().toLowerCase().includes('n/d')) return null;
+    // Check if it's already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw.toString().trim())) return raw.toString().trim();
+    // Try to convert DD/MM/YYYY to YYYY-MM-DD
+    const m = raw.toString().trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    // If it's serial date from Excel (XLSX parsing might return it as a string or number)
+    const parsedNum = parseFloat(raw);
+    if (!isNaN(parsedNum) && parsedNum > 30000 && parsedNum < 60000) {
+        // Excel base date is 30 Dec 1899 due to leap year bug
+        const dateObj = new Date((parsedNum - 25569) * 86400 * 1000);
+        return dateObj.toISOString().split('T')[0];
+    }
+    return null;
+}
+
+window.handleBulkUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            let workbook;
+            const isCSV = file.name.toLowerCase().endsWith('.csv');
+            if (isCSV) {
+                let decodedText;
+                try {
+                    decodedText = new TextDecoder('utf-8', { fatal: true }).decode(data);
+                } catch (err) {
+                    decodedText = new TextDecoder('windows-1252').decode(data);
+                }
+                workbook = XLSX.read(decodedText, { type: 'string' });
+            } else {
+                workbook = XLSX.read(data, { type: 'array' });
+            }
+
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            if (!rows || rows.length < 2) {
+                alert("The spreadsheet seems to be empty.");
+                return;
+            }
+
+            let headerRowIndex = 0;
+            let dataStartRowIndex = 1;
+            
+            const row0Str = rows[0].map(c => normString(c)).join(',');
+            
+            if (row0Str.includes('coreinformation') || row0Str.includes('performancedetails')) {
+                headerRowIndex = 1;
+                dataStartRowIndex = 2;
+                if (rows[2] && rows[2].some(c => c && c.toString().includes('linked to the database'))) {
+                    dataStartRowIndex = 3;
+                }
+            } else if (row0Str.includes('worktitle') || row0Str.includes('tituloobra') || row0Str.includes('title')) {
+                headerRowIndex = 0;
+                dataStartRowIndex = 1;
+                if (rows[1] && rows[1].some(c => c && c.toString().includes('linked to the database'))) {
+                    dataStartRowIndex = 2;
+                }
+            }
+
+            const headers = rows[headerRowIndex].map(h => h ? h.toString().trim() : '');
+            
+            const mappings = {
+                work_title: ['work title', 'titulo obra', 'obra', 'titulo', 'title'],
+                composer_name: ['composer name', 'nombre compositor', 'compositor', 'composer'],
+                performance_date: ['performance date', 'fecha', 'fecha interpretacion', 'date'],
+                event_name: ['event / festival name', 'evento', 'festival', 'event'],
+                venue: ['venue', 'lugar', 'sala'],
+                city: ['city', 'ciudad'],
+                country: ['country', 'pais'],
+                premiere_status: ['premiere status', 'estreno', 'estado estreno'],
+                ensemble_name: ['ensemble / soloist name', 'interprete', 'ensemble', 'solista'],
+                conductor: ['conductor', 'director'],
+                recording_link: ['live recording link', 'grabacion', 'audio', 'video', 'link'],
+                photo_link: ['photo / poster', 'foto', 'poster', 'imagen'],
+                program_notes: ['program notes (used)', 'notas programa', 'notas'],
+                performance_note: ['performance note', 'nota interpretacion', 'comentarios', 'feedback']
+            };
+
+            const columnMapping = {};
+            const matchedHeadersInfo = {};
+
+            for (const fieldKey in mappings) {
+                const searchKeys = mappings[fieldKey];
+                const headerIndex = headers.findIndex(h => {
+                    const normH = normString(h);
+                    return searchKeys.some(sk => normH === sk || normH.includes(sk));
+                });
+                if (headerIndex !== -1) {
+                    columnMapping[fieldKey] = headerIndex;
+                    matchedHeadersInfo[fieldKey] = headers[headerIndex];
+                }
+            }
+
+            const dataRows = rows.slice(dataStartRowIndex);
+            const rowsToProcess = dataRows.slice(0, 100);
+
+            parsedPerformances = rowsToProcess.map((rowArr, idx) => {
+                const rawTitle = columnMapping.work_title !== undefined ? rowArr[columnMapping.work_title] : '';
+                const rawComposer = columnMapping.composer_name !== undefined ? rowArr[columnMapping.composer_name] : '';
+                const rawDate = columnMapping.performance_date !== undefined ? rowArr[columnMapping.performance_date] : '';
+                const rawEvent = columnMapping.event_name !== undefined ? rowArr[columnMapping.event_name] : '';
+                const rawVenue = columnMapping.venue !== undefined ? rowArr[columnMapping.venue] : '';
+                const rawCity = columnMapping.city !== undefined ? rowArr[columnMapping.city] : '';
+                const rawCountry = columnMapping.country !== undefined ? rowArr[columnMapping.country] : '';
+                const rawPremiere = columnMapping.premiere_status !== undefined ? rowArr[columnMapping.premiere_status] : '';
+                const rawEnsemble = columnMapping.ensemble_name !== undefined ? rowArr[columnMapping.ensemble_name] : '';
+                const rawConductor = columnMapping.conductor !== undefined ? rowArr[columnMapping.conductor] : '';
+                const rawLink = columnMapping.recording_link !== undefined ? rowArr[columnMapping.recording_link] : '';
+                const rawPhoto = columnMapping.photo_link !== undefined ? rowArr[columnMapping.photo_link] : '';
+                const rawNotes = columnMapping.program_notes !== undefined ? rowArr[columnMapping.program_notes] : '';
+                const rawFeedback = columnMapping.performance_note !== undefined ? rowArr[columnMapping.performance_note] : '';
+
+                const work_title = cleanFieldBulk(rawTitle);
+                const composer_name = cleanFieldBulk(rawComposer);
+                const performance_date = parseDateBulk(rawDate);
+                const event_name = cleanFieldBulk(rawEvent);
+                const venue = cleanFieldBulk(rawVenue);
+                const city = cleanFieldBulk(rawCity);
+                const country = cleanFieldBulk(rawCountry);
+                const premiere_status = cleanFieldBulk(rawPremiere) || 'Standard Performance';
+                const ensemble_name = cleanFieldBulk(rawEnsemble);
+                const conductor = cleanFieldBulk(rawConductor);
+                const recording_link = cleanFieldBulk(rawLink);
+                const photo_link = cleanFieldBulk(rawPhoto);
+                const program_notes = cleanFieldBulk(rawNotes);
+                const performance_note = cleanFieldBulk(rawFeedback);
+
+                const errors = [];
+                if (!work_title) errors.push("Missing Work Title");
+                if (!performance_date) errors.push("Missing or invalid Performance Date");
+
+                return {
+                    id: idx,
+                    work_title,
+                    composer_name,
+                    performance_date,
+                    event_name,
+                    venue,
+                    city,
+                    country,
+                    premiere_status,
+                    ensemble_name,
+                    conductor,
+                    recording_link,
+                    photo_link,
+                    program_notes,
+                    performance_note,
+                    errors
+                };
+            }).filter(p => p.work_title || p.performance_date || p.event_name);
+
+            renderBulkPreview(matchedHeadersInfo);
+
+        } catch (err) {
+            console.error("Error loading bulk spreadsheet:", err);
+            alert("Error parsing the file. Please verify it is a valid CSV/Excel file.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+function renderBulkPreview(matchedHeadersInfo = {}) {
+    const uploadZone = document.getElementById('bulk-upload-zone');
+    const container = document.getElementById('bulk-preview-container');
+    const tbody = document.getElementById('bulk-preview-tbody');
+    const mappingGrid = document.getElementById('bulk-column-mapping-grid');
+
+    if (uploadZone) uploadZone.classList.add('hidden');
+    if (container) container.classList.remove('hidden');
+
+    if (mappingGrid) {
+        mappingGrid.innerHTML = '';
+        const fieldsToDisplay = [
+            { label: 'Work Title', key: 'work_title' },
+            { label: 'Composer Name', key: 'composer_name' },
+            { label: 'Performance Date', key: 'performance_date' },
+            { label: 'Event Name', key: 'event_name' },
+            { label: 'Venue', key: 'venue' },
+            { label: 'Ensemble Name', key: 'ensemble_name' }
+        ];
+
+        fieldsToDisplay.forEach(item => {
+            const matchedColumn = matchedHeadersInfo[item.key];
+            const displayVal = matchedColumn ? matchedColumn : 'Not mapped';
+            const isMatched = !!matchedColumn;
+            
+            mappingGrid.innerHTML += `
+                <div class="p-3 rounded-2xl bg-white/[0.02] border ${isMatched ? 'border-emerald-500/20 bg-emerald-500/[0.01]' : 'border-white/5'} flex flex-col gap-1">
+                    <span class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">${item.label}</span>
+                    <span class="font-semibold ${isMatched ? 'text-emerald-400' : 'text-slate-400'} truncate" title="${displayVal}">${displayVal}</span>
+                </div>
+            `;
+        });
+    }
+
+    updateBulkSummaryCounts();
+
+    if (tbody) {
+        tbody.innerHTML = '';
+        if (parsedPerformances.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-12 text-slate-500 font-sans">
+                        All rows removed. Drag and drop another file to start over.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        parsedPerformances.forEach((p, index) => {
+            let statusHtml = '';
+            if (p.errors.length > 0) {
+                statusHtml = `
+                    <div class="flex flex-col items-center gap-0.5 text-rose-400" title="${p.errors.join(', ')}">
+                        <span class="material-symbols-outlined text-[18px]">error</span>
+                        <span class="text-[9px] font-semibold uppercase">Error</span>
+                    </div>
+                `;
+            } else {
+                statusHtml = `
+                    <div class="flex flex-col items-center gap-0.5 text-emerald-400">
+                        <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        <span class="text-[9px] font-semibold uppercase">Ready</span>
+                    </div>
+                `;
+            }
+
+            const dateStr = p.performance_date ? p.performance_date.split('-').reverse().join('/') : '<span class="text-rose-400">—</span>';
+            const venueCity = [p.venue, p.city].filter(Boolean).join(', ') || '—';
+            const ensembleCond = [p.ensemble_name, p.conductor ? `Cond. ${p.conductor}` : null].filter(Boolean).join(' / ') || '—';
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-white/[0.01] transition-all">
+                    <td class="py-4 px-6 text-center text-slate-500 font-mono">${index + 1}</td>
+                    <td class="py-4 px-4">
+                        <div class="font-bold text-white max-w-[220px] truncate" title="${p.work_title || 'Untitled'}">${p.work_title || '<span class="text-rose-400 italic">Untitled</span>'}</div>
+                        <div class="text-[10px] text-slate-500 truncate max-w-[220px]" title="${p.composer_name || ''}">${p.composer_name || '—'}</div>
+                    </td>
+                    <td class="py-4 px-4 text-center font-mono font-semibold">${dateStr}</td>
+                    <td class="py-4 px-4 text-slate-400 truncate max-w-[150px]" title="${p.event_name || ''}">${p.event_name || '—'}</td>
+                    <td class="py-4 px-4 text-slate-400 truncate max-w-[150px]" title="${venueCity}">${venueCity}</td>
+                    <td class="py-4 px-4 text-slate-400 truncate max-w-[150px]" title="${ensembleCond}">${ensembleCond}</td>
+                    <td class="py-4 px-4 text-center">${statusHtml}</td>
+                    <td class="py-4 px-6 text-center">
+                        <button onclick="window.removeBulkRow(${p.id})" class="text-slate-500 hover:text-rose-400 transition-colors p-1" title="Delete Row">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+}
+
+function updateBulkSummaryCounts() {
+    const totalCount = parsedPerformances.length;
+    const readyCount = parsedPerformances.filter(p => p.errors.length === 0).length;
+    const errorCount = parsedPerformances.filter(p => p.errors.length > 0).length;
+
+    const previewLabel = document.getElementById('bulk-preview-count-label');
+    if (previewLabel) previewLabel.textContent = `${totalCount} interpretations loaded`;
+    
+    const actionTotal = document.getElementById('bulk-action-total');
+    if (actionTotal) actionTotal.textContent = totalCount;
+    
+    const actionReady = document.getElementById('bulk-action-ready');
+    if (actionReady) actionReady.textContent = readyCount;
+    
+    const actionErrors = document.getElementById('bulk-action-errors');
+    if (actionErrors) actionErrors.textContent = errorCount;
+
+    const submitBtn = document.getElementById('bulk-import-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = readyCount === 0;
+    }
+}
+
+window.removeBulkRow = (id) => {
+    parsedPerformances = parsedPerformances.filter(p => p.id !== id);
+    renderBulkPreview();
+};
+
+window.clearBulkImport = () => {
+    parsedPerformances = [];
+    const bulkInput = document.getElementById('bulk-file-input');
+    if (bulkInput) bulkInput.value = '';
+    const container = document.getElementById('bulk-preview-container');
+    if (container) container.classList.add('hidden');
+    const uploadZone = document.getElementById('bulk-upload-zone');
+    if (uploadZone) uploadZone.classList.remove('hidden');
+};
+
+window.submitBulkImport = async () => {
+    const validPerformances = parsedPerformances.filter(p => p.errors.length === 0);
+    if (validPerformances.length === 0) return;
+
+    const btn = document.getElementById('bulk-import-submit-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[16px]">sync</span> Saving...`;
+    btn.disabled = true;
+
+    try {
+        let successCount = 0;
+        let failCount = 0;
+        const createdWorksList = [];
+
+        for (const p of validPerformances) {
+            let workId;
+            const { data: works } = await supabase
+                .from('works')
+                .select('id')
+                .ilike('title', '%' + p.work_title + '%')
+                .limit(1);
+
+            if (!works || works.length === 0) {
+                console.log(`Work not found, creating: ${p.work_title}`);
+                let composerId = null;
+                if (p.composer_name) {
+                    const { data: composers } = await supabase
+                        .from('composers')
+                        .select('id')
+                        .ilike('name', '%' + p.composer_name + '%')
+                        .limit(1);
+                    if (composers && composers.length > 0) {
+                        composerId = composers[0].id;
+                    }
+                }
+
+                const { data: newWork, error: newWorkError } = await supabase
+                    .from('works')
+                    .insert({ 
+                        title: p.work_title, 
+                        composer_id: composerId,
+                        status: 'pending' 
+                    })
+                    .select('id')
+                    .single();
+
+                if (newWorkError || !newWork) {
+                    console.error(`Failed to create work ${p.work_title}:`, newWorkError);
+                    failCount++;
+                    continue;
+                }
+                workId = newWork.id;
+                createdWorksList.push(p.work_title);
+            } else {
+                workId = works[0].id;
+            }
+
+            const { error } = await supabase
+                .from('performances')
+                .insert({
+                    work_id: workId,
+                    performer_id: currentUser.id,
+                    performance_date: p.performance_date,
+                    event_name: p.event_name,
+                    venue: p.venue,
+                    city: p.city,
+                    country: p.country,
+                    premiere_status: p.premiere_status,
+                    ensemble_name: p.ensemble_name,
+                    conductor: p.conductor,
+                    recording_link: p.recording_link,
+                    photo_link: p.photo_link,
+                    program_notes: p.program_notes,
+                    performance_note: p.performance_note,
+                    status: 'pending'
+                });
+
+            if (error) {
+                console.error("Error inserting performance:", error);
+                failCount++;
+            } else {
+                successCount++;
+            }
+        }
+
+        document.getElementById('bulk-report-success-count').textContent = successCount;
+        const worksCreatedListEl = document.getElementById('bulk-report-works-created-list');
+        const worksCreatedWrapper = document.getElementById('bulk-report-works-created-wrapper');
+
+        if (createdWorksList.length > 0) {
+            worksCreatedListEl.innerHTML = [...new Set(createdWorksList)].map(w => {
+                return `<span class="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-2 py-0.5 rounded-md text-[10px] font-medium">${w}</span>`;
+            }).join(' ');
+            worksCreatedWrapper.classList.remove('hidden');
+        } else {
+            worksCreatedWrapper.classList.add('hidden');
+        }
+
+        document.getElementById('bulk-report-modal').classList.remove('hidden');
+        document.getElementById('bulk-report-modal').classList.add('flex');
+
+    } catch (err) {
+        console.error("Error saving bulk import:", err);
+        alert("Error saving interpretations: " + err.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
+
+window.closeBulkReportModal = () => {
+    document.getElementById('bulk-report-modal').classList.remove('flex');
+    document.getElementById('bulk-report-modal').classList.add('hidden');
+    window.clearBulkImport();
+    
+    loadStats();
+    loadSubmissions();
+    
+    showSection('submissions');
+    window.location.hash = 'submissions';
+};
+
 window.loadInteractions = loadInteractions;
 document.addEventListener('DOMContentLoaded', init);

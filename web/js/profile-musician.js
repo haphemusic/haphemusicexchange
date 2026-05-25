@@ -1,5 +1,8 @@
 import supabase from './supabase.js';
 
+let currentProfileData = {};
+
+
 async function loadProfile() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -21,6 +24,8 @@ async function loadProfile() {
 
     console.log("📊 CURRENT PROFILE STATE:");
     console.table(profile);
+    
+    currentProfileData = profile;
 
     // Rellenar Nombre y Rol en el Header del perfil
     const firstName = profile.first_name || '---';
@@ -71,19 +76,19 @@ async function loadProfile() {
 }
 
 function calculateProgress(data) {
-    const fieldsToTrack = [
-        'performer_name', 'foundation_year', 'entity_type', 'bio', 'base_city'
-    ];
-
     let completed = 0;
-    fieldsToTrack.forEach(field => {
-        const val = data[field];
-        if (val && typeof val === 'string' && val.trim() !== '') {
-            completed++;
-        }
-    });
+    const totalKeyFields = 4;
 
-    const progress = Math.round((completed / fieldsToTrack.length) * 100);
+    // 1. Nombre (performer_name)
+    if (data.performer_name && typeof data.performer_name === 'string' && data.performer_name.trim() !== '') completed++;
+    // 2. Foto (avatar_url)
+    if (data.avatar_url && typeof data.avatar_url === 'string' && data.avatar_url.trim() !== '') completed++;
+    // 3. Ciudad base / Nacionalidad
+    if (data.base_city && typeof data.base_city === 'string' && data.base_city.trim() !== '') completed++;
+    // 4. Bio
+    if (data.bio && typeof data.bio === 'string' && data.bio.trim() !== '') completed++;
+
+    const progress = Math.min(100, Math.round((completed / totalKeyFields) * 100));
     
     const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
@@ -91,8 +96,12 @@ function calculateProgress(data) {
     if (progressBar && progressText) {
         progressBar.style.width = `${progress}%`;
         progressText.textContent = `${progress}% Complete`;
+        if (progress === 100) {
+            progressBar.style.backgroundColor = '#10B981';
+        } else {
+            progressBar.style.backgroundColor = '#E57373';
+        }
     }
-
     return progress;
 }
 
@@ -126,7 +135,8 @@ async function saveProfile() {
         updated_at: new Date()
     };
 
-    const progress = calculateProgress(updates);
+    const mergedData = { ...currentProfileData, ...updates };
+    const progress = calculateProgress(mergedData);
     updates.is_complete = (progress === 100);
 
     const { data, error } = await supabase
@@ -199,6 +209,8 @@ async function uploadAvatar(event) {
             preview.classList.remove('hidden');
             initials.classList.add('hidden');
         }
+        currentProfileData.avatar_url = publicUrl;
+        calculateProgress(currentProfileData);
     }
 }
 

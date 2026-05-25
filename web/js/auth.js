@@ -119,7 +119,7 @@ function actualizarInterfaz(user, role, isComplete) {
         const statusColor = isComplete ? 'text-emerald-400' : 'text-amber-400';
         const statusIcon = isComplete ? 'check_circle' : 'warning';
         const statusText = isComplete ? 'Verified Profile' : 'Incomplete Profile';
-        const displayRole = (normRole === 'musician' || normRole === 'drums' || normRole === 'group') ? 'Performer' : role;
+        const displayRole = (normRole === 'musician' || normRole === 'drums' || normRole === 'group') ? 'Performer/Ensemble' : role;
 
         loginBtn.outerHTML = `
             <div class="flex items-center gap-4">
