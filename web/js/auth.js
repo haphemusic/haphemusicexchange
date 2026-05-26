@@ -159,6 +159,7 @@ async function intentarRegistro() {
     const dob = document.getElementById('reg-dob').value;
     const country = document.getElementById('reg-country').value;
     const password = document.getElementById('reg-password').value;
+    const passwordConfirm = document.getElementById('reg-password-confirm').value;
     const role = document.querySelector('#form-register input[name="role"]:checked').value;
     
     const errorDiv = document.getElementById('login-error');
@@ -169,6 +170,14 @@ async function intentarRegistro() {
         errorDiv.classList.remove('hidden');
         return;
     }
+
+    if (password !== passwordConfirm) {
+        errorDiv.textContent = "Passwords do not match. Please enter the same password twice.";
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+
+    errorDiv.classList.add('hidden');
 
     console.log("🚀 Registering user:", username);
 
