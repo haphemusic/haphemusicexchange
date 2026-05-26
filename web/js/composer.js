@@ -117,6 +117,56 @@ async function loadInstruments() {
     }
 }
 
+async function notifyAdminsOfUnmatchedInstruments(unmatchedNames, workTitles = []) {
+    const normalizedNames = [...new Set((unmatchedNames || []).map(name => name?.trim()).filter(Boolean))];
+    if (normalizedNames.length === 0 || !currentUser?.id) return;
+
+    const { data: admins, error: adminsError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, name')
+        .eq('role', 'admin');
+
+    if (adminsError) {
+        console.error('Error loading admins for instrument notification:', adminsError);
+        return;
+    }
+
+    const adminRecipients = (admins || []).filter(admin => admin.id !== currentUser.id);
+    if (adminRecipients.length === 0) {
+        console.warn('No admin recipients available for instrument notification.');
+        return;
+    }
+
+    const { data: composerProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, name')
+        .eq('id', currentUser.id)
+        .single();
+
+    const composerName = [composerProfile?.first_name, composerProfile?.last_name].filter(Boolean).join(' ').trim()
+        || composerProfile?.name
+        || currentUser.email
+        || 'A composer';
+
+    const workSummary = workTitles.length > 0
+        ? ` Works affected: ${workTitles.join(', ')}.`
+        : '';
+
+    const content = `[Instrument request] ${composerName} added the following unrecognized instrument${normalizedNames.length > 1 ? 's' : ''}: ${normalizedNames.join(', ')}.${workSummary} Please add these instrument${normalizedNames.length > 1 ? 's' : ''} to the catalog so they can be linked correctly.`;
+
+    const payloads = adminRecipients.map(admin => ({
+        sender_id: currentUser.id,
+        receiver_id: admin.id,
+        content,
+        is_read: false
+    }));
+
+    const { error: insertError } = await supabase.from('messages').insert(payloads);
+    if (insertError) {
+        console.error('Error sending admin notification about unmatched instruments:', insertError);
+    }
+}
+
 function renderWizInstrumentMenu() {
     const list = document.getElementById('wiz-instrument-list');
     if (!list) return;
@@ -1695,14 +1745,21 @@ window.submitBulkImport = async () => {
             document.getElementById('bulk-report-success-count').textContent = insertedWorks.length;
             const unmatchedListEl = document.getElementById('bulk-report-unmatched-list');
             const unmatchedWrapper = document.getElementById('bulk-report-unmatched-wrapper');
+            const notificationNote = document.getElementById('bulk-report-notification-note');
 
             if (unmatchedInstrumentsSet.size > 0) {
-                unmatchedListEl.innerHTML = [...unmatchedInstrumentsSet].map(u => {
+                const unmatchedNames = [...unmatchedInstrumentsSet];
+                const insertedTitles = insertedWorks.map(work => work.title).filter(Boolean);
+                await notifyAdminsOfUnmatchedInstruments(unmatchedNames, insertedTitles);
+
+                unmatchedListEl.innerHTML = unmatchedNames.map(u => {
                     return `<span class="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-2 py-0.5 rounded-md text-[10px] font-medium">${u}</span>`;
                 }).join(' ');
                 unmatchedWrapper.classList.remove('hidden');
+                notificationNote.classList.remove('hidden');
             } else {
                 unmatchedWrapper.classList.add('hidden');
+                notificationNote.classList.add('hidden');
             }
 
             document.getElementById('bulk-report-modal').classList.remove('hidden');
