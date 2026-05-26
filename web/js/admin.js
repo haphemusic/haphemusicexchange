@@ -1,6 +1,8 @@
 import supabase from './supabase.js';
 
 let currentUser = null;
+let allPieces = [];
+let allInstruments = [];
 
 async function init() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -21,6 +23,7 @@ async function init() {
     await loadStats();
     await loadUsers();
     await loadInstruments();
+    await loadPieces();
     
     const hash = window.location.hash.substring(1) || 'analytics';
     showSection(hash);
@@ -156,7 +159,7 @@ async function loadUsers() {
                     </div>
                 </td>
                 <td class="px-8 py-4">
-                    <span class="badge bg-slate-800 text-slate-400">${u.role}</span>
+                    <span class="badge bg-slate-800 text-slate-400">${u.role === 'musician' ? 'performer' : u.role}</span>
                 </td>
                 <td class="px-8 py-4 text-xs text-slate-400">${u.updated_at ? new Date(u.updated_at).toLocaleDateString() : 'N/A'}</td>
                 <td class="px-8 py-4">
@@ -201,22 +204,77 @@ window.moderateUser = async (userId, newStatus) => {
 
 async function loadInstruments() {
     const { data: instruments } = await supabase.from('instruments').select('*').order('family', { ascending: true });
-    const container = document.getElementById('instrument-grid');
-    
     if (!instruments) return;
+    allInstruments = instruments;
+    renderInstrumentBoard();
+}
 
-    container.innerHTML = instruments.map(i => `
-        <div class="glass-panel p-6 rounded-3xl space-y-2 border-white/5 hover:border-salmon/30 transition-all">
-            <div class="flex justify-between items-start gap-3">
-                <p class="font-bold text-white leading-tight">${i.variant || i.name}</p>
-                <span class="material-symbols-outlined text-slate-600 flex-shrink-0">music_note</span>
+function renderInstrumentBoard() {
+    const container = document.getElementById('instrument-board');
+    if (!container) return;
+
+    // Group instruments by family
+    const grouped = {};
+    const families = [...new Set(allInstruments.map(i => i.family))].sort();
+    
+    families.forEach(f => {
+        grouped[f] = [];
+    });
+    
+    allInstruments.forEach(i => {
+        if (grouped[i.family]) {
+            grouped[i.family].push(i);
+        }
+    });
+
+    container.innerHTML = families.map(family => {
+        const list = grouped[family] || [];
+        return `
+            <div class="flex-shrink-0 w-80 bg-slate-950/40 rounded-3xl border border-white/5 p-6 flex flex-col max-h-[70vh] transition-all duration-300" 
+                 ondragover="window.handleDragOver(event)"
+                 ondragenter="window.handleDragEnter(event)"
+                 ondragleave="window.handleDragLeave(event)"
+                 ondrop="window.handleDrop(event, '${family}')">
+                
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-salmon"></span>
+                        <h3 class="font-bold text-white uppercase tracking-wider text-xs">${family}</h3>
+                    </div>
+                    <span class="bg-white/5 border border-white/10 text-[10px] text-slate-400 px-2.5 py-0.5 rounded-full font-bold">
+                        ${list.length}
+                    </span>
+                </div>
+
+                <div class="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent" style="max-height: calc(70vh - 100px); min-height: 200px;">
+                    ${list.length === 0 ? `
+                        <div class="border border-dashed border-white/5 rounded-2xl p-6 text-center text-xs text-slate-500">
+                            Drag instruments here
+                        </div>
+                    ` : list.map(i => `
+                        <div draggable="true" 
+                             ondragstart="window.handleDragStart(event, '${i.id}')"
+                             class="glass-panel p-5 rounded-2xl space-y-2 border-white/5 hover:border-salmon/30 cursor-grab active:cursor-grabbing transition-all duration-200 group relative">
+                            
+                            <div class="flex justify-between items-start gap-3">
+                                <p class="font-bold text-sm text-white leading-tight">${i.variant || i.name}</p>
+                                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="window.deleteInstrument('${i.id}')" class="w-6 h-6 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-[14px]">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center text-[8px] font-black tracking-widest uppercase mt-2">
+                                <p class="text-salmon font-bold">${i.family}</p>
+                                <p class="text-slate-500">${i.name}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
-            <div class="flex justify-between items-center text-[9px] font-black tracking-widest uppercase">
-                <p class="text-salmon">${i.family}</p>
-                <p class="text-slate-500">${i.name}</p>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 window.toggleNewFamilyInput = (val) => {
@@ -271,6 +329,215 @@ function showSection(sectionId) {
     }
 }
 
+async function loadPieces() {
+    const { data: pieces, error } = await supabase
+        .from('works')
+        .select(`
+            id, title, subtitle, year, duration_minutes,
+            scoring_category, technical_difficulty,
+            composer:composer_id(name),
+            submitter:submitted_by(first_name, last_name, performer_name, name)
+        `)
+        .order('title', { ascending: true });
+
+    if (error) {
+        console.error('Failed to load pieces:', error);
+        return;
+    }
+
+    allPieces = pieces || [];
+    renderPieces(allPieces);
+}
+
+function renderPieces(piecesToRender) {
+    const container = document.getElementById('admin-pieces-table');
+    if (!container) return;
+
+    if (!piecesToRender || piecesToRender.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-8 py-8 text-center text-slate-500 text-sm">
+                    No pieces found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    container.innerHTML = piecesToRender.map(p => {
+        const composerName = p.composer?.name || 'Unknown Composer';
+        const submitterProfile = p.submitter;
+        let submitterName = 'System / Admin';
+        if (submitterProfile) {
+            submitterName = `${submitterProfile.first_name || ''} ${submitterProfile.last_name || ''}`.trim() 
+                || submitterProfile.performer_name 
+                || submitterProfile.name 
+                || 'Anonymous User';
+        }
+        const yearVal = p.year || 'N/A';
+        const durationVal = p.duration_minutes ? `${p.duration_minutes} min` : 'N/A';
+        const categoryVal = p.scoring_category || 'N/A';
+        const difficultyVal = p.technical_difficulty || 'N/A';
+
+        // Difficulty badge color class
+        let diffColor = 'bg-slate-800 text-slate-400';
+        if (difficultyVal.toLowerCase() === 'student') diffColor = 'bg-emerald-500/10 text-emerald-400';
+        else if (difficultyVal.toLowerCase() === 'advanced') diffColor = 'bg-amber-500/10 text-amber-400';
+        else if (difficultyVal.toLowerCase() === 'professional') diffColor = 'bg-rose-500/10 text-rose-400';
+
+        return `
+            <tr class="hover:bg-white/2 transition-colors">
+                <td class="px-8 py-4">
+                    <div>
+                        <p class="text-sm font-bold text-white">${p.title}</p>
+                        ${p.subtitle ? `<p class="text-[10px] text-slate-500">${p.subtitle}</p>` : ''}
+                    </div>
+                </td>
+                <td class="px-8 py-4 text-sm text-slate-300">
+                    ${composerName}
+                </td>
+                <td class="px-8 py-4 text-sm text-slate-400">
+                    ${submitterName}
+                </td>
+                <td class="px-8 py-4 text-xs text-slate-400">
+                    ${yearVal} / ${durationVal}
+                </td>
+                <td class="px-8 py-4">
+                    <div class="flex flex-wrap gap-1.5 font-sans">
+                        <span class="badge ${diffColor}">${difficultyVal}</span>
+                        <span class="badge bg-slate-800 text-slate-400">${categoryVal}</span>
+                    </div>
+                </td>
+                <td class="px-8 py-4 text-right">
+                    <button onclick="window.deletePiece('${p.id}')" title="Delete Piece" class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.filterPieces = (query) => {
+    const q = query.toLowerCase().trim();
+    if (!q) {
+        renderPieces(allPieces);
+        return;
+    }
+    const filtered = allPieces.filter(p => {
+        const titleMatch = p.title?.toLowerCase().includes(q);
+        const subtitleMatch = p.subtitle?.toLowerCase().includes(q);
+        const composerMatch = p.composer?.name?.toLowerCase().includes(q);
+        
+        let submitterName = '';
+        if (p.submitter) {
+            submitterName = `${p.submitter.first_name || ''} ${p.submitter.last_name || ''}`.trim()
+                || p.submitter.performer_name
+                || p.submitter.name
+                || '';
+        }
+        const submitterMatch = submitterName.toLowerCase().includes(q);
+
+        return titleMatch || subtitleMatch || composerMatch || submitterMatch;
+    });
+    renderPieces(filtered);
+};
+
+window.deletePiece = async (pieceId) => {
+    if (!confirm('Are you sure you want to permanently delete this piece from the catalog? This action cannot be undone.')) {
+        return;
+    }
+
+    const { error } = await supabase
+        .from('works')
+        .delete()
+        .eq('id', pieceId);
+
+    if (error) {
+        alert('Error deleting piece: ' + error.message);
+    } else {
+        await loadPieces();
+        await loadStats(); // Reload stats as works count has changed
+    }
+};
+
+let draggedInstrumentId = null;
+
+window.handleDragStart = (event, instrumentId) => {
+    draggedInstrumentId = instrumentId;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', instrumentId);
+    
+    // Add visual effect to the dragged element
+    const element = event.currentTarget;
+    element.classList.add('opacity-40');
+    setTimeout(() => element.classList.remove('opacity-40'), 0);
+};
+
+window.handleDragOver = (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+};
+
+window.handleDragEnter = (event) => {
+    const col = event.currentTarget;
+    col.classList.add('bg-salmon/5', 'border-salmon/30');
+};
+
+window.handleDragLeave = (event) => {
+    const col = event.currentTarget;
+    col.classList.remove('bg-salmon/5', 'border-salmon/30');
+};
+
+window.handleDrop = async (event, targetFamily) => {
+    event.preventDefault();
+    const col = event.currentTarget;
+    col.classList.remove('bg-salmon/5', 'border-salmon/30');
+    
+    const instrumentId = draggedInstrumentId || event.dataTransfer.getData('text/plain');
+    if (!instrumentId) return;
+
+    // Find the instrument in allInstruments
+    const inst = allInstruments.find(i => i.id == instrumentId);
+    if (!inst) return;
+    
+    if (inst.family === targetFamily) return; // Same family, no change needed
+
+    // Update family in local memory first for instant UI response
+    inst.family = targetFamily;
+    renderInstrumentBoard();
+
+    // Update in Supabase
+    const { error } = await supabase
+        .from('instruments')
+        .update({ family: targetFamily })
+        .eq('id', instrumentId);
+
+    if (error) {
+        alert('Error updating instrument family: ' + error.message);
+        await loadInstruments(); // Reload to revert UI if failed
+    }
+};
+
+window.deleteInstrument = async (instrumentId) => {
+    if (!confirm('Are you sure you want to permanently delete this instrument from the catalog? This action cannot be undone.')) {
+        return;
+    }
+
+    // Optimistic delete
+    allInstruments = allInstruments.filter(i => i.id != instrumentId);
+    renderInstrumentBoard();
+
+    const { error } = await supabase
+        .from('instruments')
+        .delete()
+        .eq('id', instrumentId);
+
+    if (error) {
+        alert('Error deleting instrument: ' + error.message);
+        await loadInstruments(); // Reload if failed
+    }
+};
 
 window.showSection = showSection;
 window.openInstrumentModal = () => document.getElementById('instrument-modal').classList.remove('hidden', 'flex') || document.getElementById('instrument-modal').classList.add('flex');

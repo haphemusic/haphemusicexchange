@@ -165,7 +165,7 @@
         .badge-diff-professional { background: rgba(229,115,115,0.12); color: #E57373; }
 
         /* ── Modal ────────────────────────────────────────────────── */
-        #work-modal-backdrop {
+        #work-modal-backdrop, #performance-modal-backdrop {
             display: none;
             position: fixed;
             inset: 0;
@@ -176,8 +176,8 @@
             justify-content: center;
             padding: 24px;
         }
-        #work-modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease-out; }
-        #work-modal {
+        #work-modal-backdrop.open, #performance-modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease-out; }
+        #work-modal, #performance-modal {
             background: #0d1c2d;
             border: 1px solid rgba(229,115,115,0.25);
             border-radius: 24px;
@@ -189,8 +189,8 @@
             position: relative;
             animation: slideDown 0.25s ease-out;
         }
-        #work-modal::-webkit-scrollbar { width: 4px; }
-        #work-modal::-webkit-scrollbar-thumb { background: rgba(229,115,115,0.3); border-radius: 4px; }
+        #work-modal::-webkit-scrollbar, #performance-modal::-webkit-scrollbar { width: 4px; }
+        #work-modal::-webkit-scrollbar-thumb, #performance-modal::-webkit-scrollbar-thumb { background: rgba(229,115,115,0.3); border-radius: 4px; }
         .modal-section-title {
             font-size: 10px;
             font-weight: 700;
@@ -229,7 +229,7 @@
 
 <nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 h-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/10">
     <div class="flex items-center gap-12">
-        <a href="index.html" class="text-2xl font-bold tracking-tighter text-white">HAPHEMUSIC</a>
+        <a href="index.html" class="text-2xl font-bold tracking-tighter text-white hover:text-salmon transition-all duration-300">HAPHEMUSIC</a>
     </div>
 
     <!-- Center Column: Community & About Links -->
@@ -345,9 +345,19 @@
             </div>
         </div>
         
-        <div class="mt-6">
-            <label class="block text-xs text-tertiary-container uppercase tracking-[0.2em] font-semibold mb-2">Search works</label>
-            <input id="work-search-input" type="text" oninput="filterWorks()" placeholder="Search by title, composer, or instrumentation..." class="w-full h-[50px] bg-surface-container-low border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors">
+        <div class="mt-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex-1">
+                <label class="block text-xs text-tertiary-container uppercase tracking-[0.2em] font-semibold mb-2">Search Catalog</label>
+                <input id="work-search-input" type="text" oninput="filterWorks()" placeholder="Search by title, composer, performer, or instrumentation..." class="w-full h-[50px] bg-surface-container-low border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-salmon transition-colors">
+            </div>
+            <div class="shrink-0">
+                <label class="block text-xs text-tertiary-container uppercase tracking-[0.2em] font-semibold mb-2">Search Target</label>
+                <div class="flex h-[50px] bg-surface-container-low border border-white/10 rounded-xl p-1 items-center gap-1">
+                    <button type="button" id="target-both" onclick="window.setSearchTarget('both')" class="h-full px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 bg-salmon text-white select-none">Both</button>
+                    <button type="button" id="target-works" onclick="window.setSearchTarget('works')" class="h-full px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 text-slate-400 hover:text-white select-none">Works</button>
+                    <button type="button" id="target-interpretations" onclick="window.setSearchTarget('interpretations')" class="h-full px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 text-slate-400 hover:text-white select-none">Interpretations</button>
+                </div>
+            </div>
         </div>
 
         <!-- Tags Container below the grid -->
@@ -399,6 +409,11 @@
     <div id="work-modal"></div>
 </div>
 
+<!-- ── Performance Detail Modal ───────────────────────────────── -->
+<div id="performance-modal-backdrop">
+    <div id="performance-modal"></div>
+</div>
+
 <!-- ── User Search Modal ─────────────────────────────────────── -->
 <div id="user-search-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 99998; align-items: center; justify-content: center; padding: 24px;">
     <div style="background: #0d1c2d; border: 1px solid rgba(229,115,115,0.25); border-radius: 24px; max-width: 580px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; position: relative;">
@@ -415,7 +430,7 @@
         <!-- Input field -->
         <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.04); position: relative;">
             <span class="material-symbols-outlined absolute left-9 top-[33px] text-slate-500">search</span>
-            <input type="text" id="user-search-input" oninput="window.searchUsers(this.value)" placeholder="Type username, first name or last name..." style="width: 100%; bg-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 16px 12px 42px; color: #fff; outline: none; transition: border-color 0.2s;" class="focus:border-salmon bg-white/5 text-white">
+            <input type="text" id="user-search-input" oninput="window.searchUsers(this.value)" placeholder="Search by name, username, group or ensemble..." style="width: 100%; bg-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 16px 12px 42px; color: #fff; outline: none; transition: border-color 0.2s;" class="focus:border-salmon bg-white/5 text-white">
         </div>
         <!-- Results container -->
         <div id="user-search-results" style="flex: 1; overflow-y: auto; padding: 16px 24px;" class="space-y-3">
@@ -792,6 +807,40 @@
     const WORKS_PER_PAGE = 50;
     const DEFAULT_PREVIEW_COUNT = 6;
 
+    window.searchTarget = 'both';
+    window.setSearchTarget = (target) => {
+        window.searchTarget = target;
+        
+        const btnBoth = document.getElementById('target-both');
+        const btnWorks = document.getElementById('target-works');
+        const btnInterps = document.getElementById('target-interpretations');
+        
+        const activeClass = ['bg-salmon', 'text-white'];
+        const inactiveClass = ['text-slate-400', 'hover:text-white'];
+        
+        [btnBoth, btnWorks, btnInterps].forEach(btn => {
+            if (btn) {
+                btn.classList.remove(...activeClass, ...inactiveClass);
+            }
+        });
+        
+        if (target === 'both') {
+            btnBoth?.classList.add(...activeClass);
+            btnWorks?.classList.add(...inactiveClass);
+            btnInterps?.classList.add(...inactiveClass);
+        } else if (target === 'works') {
+            btnBoth?.classList.add(...inactiveClass);
+            btnWorks?.classList.add(...activeClass);
+            btnInterps?.classList.add(...inactiveClass);
+        } else if (target === 'interpretations') {
+            btnBoth?.classList.add(...inactiveClass);
+            btnWorks?.classList.add(...inactiveClass);
+            btnInterps?.classList.add(...activeClass);
+        }
+        
+        filterWorks();
+    };
+
     window.viewAllWorks = () => {
         isViewAllActive = true;
         currentCatalogPage = 1;
@@ -833,11 +882,11 @@
         const dt = parseFloat(document.getElementById('duration-to')?.value) || 99999;
         const co = document.getElementById('country-select').value;
         const ge = document.getElementById('gender-select').value.toLowerCase();
-        const selectedTags = [...document.querySelectorAll('#tags-container .tag-item')].map(tag => tag.dataset.tag.toLowerCase());
+        const selectedTagsForCheck = [...document.querySelectorAll('#tags-container .tag-item')].map(tag => tag.dataset.tag.toLowerCase());
 
         // Auto-activate view all if any filter/search is applied
         const searchTermCheck = document.getElementById('work-search-input')?.value.trim() || '';
-        const hasActiveFilters = searchTermCheck || co || ge || selectedTags.length > 0
+        const hasActiveFilters = searchTermCheck || co || ge || selectedTagsForCheck.length > 0
             || yf > 0 || yt < 9999 || df > 0 || dt < 99999;
         if (hasActiveFilters && !isViewAllActive) {
             isViewAllActive = true;
@@ -845,8 +894,6 @@
             const viewAllBtn = document.getElementById('view-all-btn');
             if (viewAllBtn) viewAllBtn.style.display = 'none';
         }
-        // If filters were cleared and we were in view-all mode triggered only by filters,
-        // allow a reset back to preview mode (unless the user explicitly clicked VIEW ALL)
         if (!hasActiveFilters && !window._viewAllClickedExplicitly) {
             isViewAllActive = false;
             currentCatalogPage = 1;
@@ -854,16 +901,38 @@
             if (viewAllBtn) viewAllBtn.style.display = '';
         }
 
-        // Fetch all validated works from Supabase joining both classical composers and submitting user profiles
-        const { data: works, error } = await supabase
-            .from('works')
-            .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
-            .eq('status', 'validated');
+        // Fetch target
+        let works = [];
+        let performances = [];
+        const target = window.searchTarget || 'both';
 
-        if (error) {
-            console.error("Error fetching works:", error);
-            return;
+        const promises = [];
+        if (target === 'both' || target === 'works') {
+            promises.push(
+                supabase
+                    .from('works')
+                    .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
+                    .eq('status', 'validated')
+                    .then(({ data, error }) => {
+                        if (error) console.error("Error fetching works:", error);
+                        else if (data) works = data;
+                    })
+            );
         }
+        if (target === 'both' || target === 'interpretations') {
+            promises.push(
+                supabase
+                    .from('performances')
+                    .select('*, work:work_id(*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))), performer:performer_id(*)')
+                    .eq('status', 'validated')
+                    .then(({ data, error }) => {
+                        if (error) console.error("Error fetching performances:", error);
+                        else if (data) performances = data;
+                    })
+            );
+        }
+
+        await Promise.all(promises);
 
         // Get active instrument tags from the DOM
         const tagsContainer = document.getElementById('tags-container');
@@ -885,16 +954,20 @@
             }
         }
 
-        const filtered = (works || []).filter(w => {
-            // Year filter
+        // Helper to match country
+        const isCountryMatch = (countryStr, searchCountry) => {
+            if (!countryStr || !searchCountry) return false;
+            return countryStr.toLowerCase() === searchCountry.toLowerCase();
+        };
+
+        // Filter Works
+        const filteredWorks = works.filter(w => {
             const year = w.year ? parseInt(w.year) : null;
             if (year !== null && (year < yf || year > yt)) return false;
 
-            // Duration filter
             const duration = (w.duration_minutes !== undefined && w.duration_minutes !== null) ? parseFloat(w.duration_minutes) : null;
             if (duration !== null && (duration < df || duration > dt)) return false;
 
-            // Country filter
             if (co) {
                 const composerCountry = w.composer?.nationality;
                 const submitterCountry = w.submitter?.residence_country || w.submitter?.nationality;
@@ -903,7 +976,6 @@
                 if (!matchComposer && !matchSubmitter) return false;
             }
 
-            // Gender filter
             if (ge) {
                 const composerGender = w.composer?.gender;
                 const submitterGender = w.submitter?.gender;
@@ -912,13 +984,10 @@
                 if (!matchComposer && !matchSubmitter) return false;
             }
 
-            // Instrument tag filter
             if (activeTags.length > 0) {
                 const exclusiveMatch = document.getElementById('instrument-exclusive')?.checked;
-                
                 if (exclusiveMatch) {
                     if (!w.work_instruments || w.work_instruments.length === 0) return false;
-                    
                     const allInstrumentsMatch = w.work_instruments.every(wi => {
                         const instName = wi.instrument_id?.name?.toLowerCase();
                         const instVariant = wi.instrument_id?.variant?.toLowerCase();
@@ -966,7 +1035,117 @@
             return true;
         });
 
-        renderResults(filtered);
+        // Filter Performances
+        const filteredPerformances = performances.filter(p => {
+            const year = p.work?.year ? parseInt(p.work.year) : (p.performance_date ? parseInt(p.performance_date.split('-')[0]) : null);
+            if (year !== null && (year < yf || year > yt)) return false;
+
+            const duration = (p.work?.duration_minutes !== undefined && p.work?.duration_minutes !== null) ? parseFloat(p.work.duration_minutes) : null;
+            if (duration !== null && (duration < df || duration > dt)) return false;
+
+            if (co) {
+                const compCountry = p.work?.composer?.nationality;
+                const subCountry = p.work?.submitter?.residence_country || p.work?.submitter?.nationality;
+                const perfCountry = p.performer?.nationality || p.country;
+                const matchComposer = compCountry && isCountryMatch(compCountry, co);
+                const matchSubmitter = subCountry && isCountryMatch(subCountry, co);
+                const matchPerformer = perfCountry && isCountryMatch(perfCountry, co);
+                if (!matchComposer && !matchSubmitter && !matchPerformer) return false;
+            }
+
+            if (ge) {
+                const compGender = p.work?.composer?.gender;
+                const subGender = p.work?.submitter?.gender;
+                const perfGender = p.performer?.gender;
+                const matchComposer = compGender && compGender.toLowerCase() === ge;
+                const matchSubmitter = subGender && subGender.toLowerCase() === ge;
+                const matchPerformer = perfGender && perfGender.toLowerCase() === ge;
+                if (!matchComposer && !matchSubmitter && !matchPerformer) return false;
+            }
+
+            if (activeTags.length > 0) {
+                const exclusiveMatch = document.getElementById('instrument-exclusive')?.checked;
+                const wInstruments = p.work?.work_instruments || [];
+                if (exclusiveMatch) {
+                    if (wInstruments.length === 0) return false;
+                    const allInstrumentsMatch = wInstruments.every(wi => {
+                        const instName = wi.instrument_id?.name?.toLowerCase();
+                        const instVariant = wi.instrument_id?.variant?.toLowerCase();
+                        const instFamily = wi.instrument_id?.family?.toLowerCase();
+                        return activeTags.some(tag => 
+                            (instName && instName.includes(tag)) || 
+                            (instVariant && instVariant.includes(tag)) ||
+                            (instFamily && instFamily.includes(tag)) ||
+                            tag.includes(instName || '')
+                        );
+                    });
+                    if (!allInstrumentsMatch) return false;
+                } else {
+                    const hasInstrument = wInstruments.some(wi => {
+                        const instName = wi.instrument_id?.name?.toLowerCase();
+                        const instVariant = wi.instrument_id?.variant?.toLowerCase();
+                        const instFamily = wi.instrument_id?.family?.toLowerCase();
+                        return activeTags.some(tag => 
+                            (instName && instName.includes(tag)) || 
+                            (instVariant && instVariant.includes(tag)) ||
+                            (instFamily && instFamily.includes(tag)) ||
+                            tag.includes(instName || '')
+                        );
+                    });
+                    if (!hasInstrument) return false;
+                }
+            }
+
+            if (searchTerm) {
+                const title = p.work?.title?.toLowerCase() || '';
+                const subtitle = p.work?.subtitle?.toLowerCase() || '';
+                const composerName = p.work?.composer?.name?.toLowerCase() || '';
+                const submitterName = `${p.work?.submitter?.first_name || ''} ${p.work?.submitter?.last_name || ''}`.trim().toLowerCase();
+                const performerName = p.performer?.performer_name?.toLowerCase() || `${p.performer?.first_name || ''} ${p.performer?.last_name || ''}`.trim().toLowerCase();
+                const ensembleName = p.ensemble_name?.toLowerCase() || '';
+                const eventName = p.event_name?.toLowerCase() || '';
+                const venue = p.venue?.toLowerCase() || '';
+                const city = p.city?.toLowerCase() || '';
+                const country = p.country?.toLowerCase() || '';
+                const conductor = p.conductor?.toLowerCase() || '';
+                const instrumentText = (p.work?.work_instruments || [])
+                    .map(wi => [wi.instrument_id?.name, wi.instrument_id?.variant, wi.instrument_id?.family]
+                        .filter(Boolean)
+                        .join(' ')
+                    ).join(' ').toLowerCase();
+
+                const searchable = `${title} ${subtitle} ${composerName} ${submitterName} ${performerName} ${ensembleName} ${eventName} ${venue} ${city} ${country} ${conductor} ${instrumentText}`;
+                if (!searchable.includes(searchTerm)) return false;
+            }
+
+            return true;
+        });
+
+        // Combine results
+        const combinedResults = [];
+        filteredWorks.forEach(w => {
+            combinedResults.push({
+                type: 'work',
+                id: w.id,
+                dateForOrdering: w.created_at || '',
+                data: w
+            });
+        });
+        filteredPerformances.forEach(p => {
+            combinedResults.push({
+                type: 'interpretation',
+                id: p.id,
+                dateForOrdering: p.performance_date || p.created_at || '',
+                data: p
+            });
+        });
+
+        // Sort by date descending
+        combinedResults.sort((a, b) => {
+            return new Date(b.dateForOrdering) - new Date(a.dateForOrdering);
+        });
+
+        renderResults(combinedResults);
     };
 
     function renderResults(works) {
@@ -989,12 +1168,25 @@
         if (noResults) noResults.classList.add('hidden');
 
         let worksToRender;
+        let labelSingular = 'item';
+        let labelPlural = 'items';
+        const target = window.searchTarget || 'both';
+        if (target === 'works') {
+            labelSingular = 'work';
+            labelPlural = 'works';
+        } else if (target === 'interpretations') {
+            labelSingular = 'interpretation';
+            labelPlural = 'interpretations';
+        } else {
+            labelSingular = 'work/interpretation';
+            labelPlural = 'works and interpretations';
+        }
 
         if (!isViewAllActive) {
             // ── Default mode: show 6 preview cards ─────────────────
             worksToRender = works.slice(0, DEFAULT_PREVIEW_COUNT);
             if (paginationEl) paginationEl.style.display = 'none';
-            if (sectionTitle) sectionTitle.textContent = 'Recent Works';
+            if (sectionTitle) sectionTitle.textContent = target === 'both' ? 'Recent Additions' : (target === 'works' ? 'Recent Works' : 'Recent Interpretations');
             if (sectionSubtitle) sectionSubtitle.textContent = 'New additions to the digital catalog';
         } else {
             // ── View All / Search mode: 50 per page ─────────────────
@@ -1006,7 +1198,7 @@
 
             // Update section heading
             if (sectionTitle) sectionTitle.textContent = 'Complete Archive';
-            if (sectionSubtitle) sectionSubtitle.textContent = `Showing ${start + 1}–${Math.min(start + WORKS_PER_PAGE, totalWorks)} of ${totalWorks} works`;
+            if (sectionSubtitle) sectionSubtitle.textContent = `Showing ${start + 1}–${Math.min(start + WORKS_PER_PAGE, totalWorks)} of ${totalWorks} ${labelPlural}`;
 
             // Render pagination bar
             if (paginationEl) {
@@ -1043,7 +1235,6 @@
                     `);
 
                     // Page number buttons
-                    // Smart windowing: always show first, last, current ±2
                     const pageSet = new Set();
                     pageSet.add(1);
                     pageSet.add(totalPages);
@@ -1055,7 +1246,6 @@
                     let prevPage = null;
                     for (const page of sortedPages) {
                         if (prevPage !== null && page - prevPage > 1) {
-                            // Ellipsis
                             buttons.push(`<span style="color:#4a5568;font-size:13px;padding:0 4px">···</span>`);
                         }
                         const isActive = page === currentCatalogPage;
@@ -1083,8 +1273,7 @@
                             border: 1px solid ${currentCatalogPage === totalPages ? 'rgba(255,255,255,0.06)' : 'rgba(229,115,115,0.3)'};
                             color: ${currentCatalogPage === totalPages ? '#4a5568' : '#E57373'};
                             width: 38px; height: 38px; border-radius: 10px;
-                            cursor: ${currentCatalogPage === totalPages ? 'not-allowed' : 'pointer'};
-                            display: flex; align-items: center; justify-content: center;
+                            cursor: pointer; display: flex; align-items: center; justify-content: center;
                             font-size: 18px; transition: all 0.2s;
                         ">
                             <span class="material-symbols-outlined" style="font-size:18px">chevron_right</span>
@@ -1096,79 +1285,119 @@
             }
         }
 
-        grid.innerHTML = worksToRender.map(w => {
-            const composerName = w.composer?.name
-                || (w.submitter ? `${w.submitter.first_name || ''} ${w.submitter.last_name || ''}`.trim() : '')
-                || 'Unknown Composer';
+        grid.innerHTML = worksToRender.map(item => {
+            if (item.type === 'work') {
+                const w = item.data;
+                const composerName = w.composer?.name
+                    || (w.submitter ? `${w.submitter.first_name || ''} ${w.submitter.last_name || ''}`.trim() : '')
+                    || 'Unknown Composer';
+                    
+                const location = w.composer?.nationality 
+                    || w.submitter?.residence_country 
+                    || w.submitter?.nationality 
+                    || '';
+                    
+                const insts = w.work_instruments?.map(wi => wi.instrument_id).filter(Boolean) || [];
+                const instruments = insts.map(i => i.name).filter(Boolean).join(', ');
                 
-            const location = w.composer?.nationality 
-                || w.submitter?.residence_country 
-                || w.submitter?.nationality 
-                || '';
+                const stylePills = (w.style_tags || []).slice(0,3).map(t =>
+                    `<span style="background:rgba(229,115,115,0.12);color:#E57373;border:1px solid rgba(229,115,115,0.2);padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600">${t}</span>`
+                ).join('');
                 
-            const insts = w.work_instruments?.map(wi => wi.instrument_id).filter(Boolean) || [];
-            const instruments = insts.map(i => i.name).filter(Boolean).join(', ');
-            
-            const stylePills = (w.style_tags || []).slice(0,3).map(t =>
-                `<span style="background:rgba(229,115,115,0.12);color:#E57373;border:1px solid rgba(229,115,115,0.2);padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600">${t}</span>`
-            ).join('');
-            
-            const duration = w.duration_minutes ? `<span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;margin-right:2px">schedule</span>${w.duration_minutes} min` : '';
-            const elec = w.has_electronics ? `<span class="work-badge badge-electronics"><span class="material-symbols-outlined" style="font-size:11px">bolt</span>Electronics</span>` : '';
-            
-            const wData = encodeURIComponent(JSON.stringify(w)).replace(/'/g, "%27");
-            const instData = encodeURIComponent(JSON.stringify(insts)).replace(/'/g, "%27");
-            
-            // Calculate vote score for this work
-            const votesForWork = workVotes.filter(v => v.work_id === w.id);
-            const score = votesForWork.reduce((acc, curr) => acc + curr.vote_type, 0);
-            const userVote = currentUserId ? votesForWork.find(v => v.user_id === currentUserId) : null;
-            const userVoteType = userVote ? userVote.vote_type : 0;
-            
-            return `
-            <div class="work-card" onclick="window.openWorkModal('${wData}','${instData}')">
-                <!-- Top badges & Vote -->
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        ${scoringBadge(w.scoring_category)}
-                        ${diffBadge(w.technical_difficulty)}
-                        ${elec}
+                const duration = w.duration_minutes ? `<span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;margin-right:2px">schedule</span>${w.duration_minutes} min` : '';
+                const elec = w.has_electronics ? `<span class="work-badge badge-electronics"><span class="material-symbols-outlined" style="font-size:11px">bolt</span>Electronics</span>` : '';
+                
+                const wData = encodeURIComponent(JSON.stringify(w)).replace(/'/g, "%27");
+                const instData = encodeURIComponent(JSON.stringify(insts)).replace(/'/g, "%27");
+                
+                const votesForWork = workVotes.filter(v => v.work_id === w.id);
+                const score = votesForWork.reduce((acc, curr) => acc + curr.vote_type, 0);
+                const userVote = currentUserId ? votesForWork.find(v => v.user_id === currentUserId) : null;
+                const userVoteType = userVote ? userVote.vote_type : 0;
+                
+                return `
+                <div class="work-card" onclick="window.openWorkModal('${wData}','${instData}')">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                            <span class="work-badge" style="background:rgba(229,115,115,0.12);color:#E57373;border:1px solid rgba(229,115,115,0.2)">Work</span>
+                            ${scoringBadge(w.scoring_category)}
+                            ${elec}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">
+                            <button onclick="window.handleWorkVote(${w.id}, 1)" style="background:none;border:none;padding:2px;cursor:pointer;color:${userVoteType === 1 ? '#E57373' : '#8b96ac'};display:flex;align-items:center;transition:color 0.2s" class="hover:text-salmon">
+                                <span class="material-symbols-outlined" style="font-size:16px">arrow_upward</span>
+                            </button>
+                            <span style="font-size:11px;font-weight:bold;color:${score > 0 ? '#E57373' : score < 0 ? '#63b3ed' : '#8b96ac'};min-width:12px;text-align:center">${score}</span>
+                            <button onclick="window.handleWorkVote(${w.id}, -1)" style="background:none;border:none;padding:2px;cursor:pointer;color:${userVoteType === -1 ? '#63b3ed' : '#8b96ac'};display:flex;align-items:center;transition:color 0.2s" class="hover:text-cyan-400">
+                                <span class="material-symbols-outlined" style="font-size:16px">arrow_downward</span>
+                            </button>
+                        </div>
                     </div>
-                    <!-- Voting Widget -->
-                    <div style="display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">
-                        <button onclick="window.handleWorkVote(${w.id}, 1)" style="background:none;border:none;padding:2px;cursor:pointer;color:${userVoteType === 1 ? '#E57373' : '#8b96ac'};display:flex;align-items:center;transition:color 0.2s" class="hover:text-salmon">
-                            <span class="material-symbols-outlined" style="font-size:16px">arrow_upward</span>
-                        </button>
-                        <span style="font-size:11px;font-weight:bold;color:${score > 0 ? '#E57373' : score < 0 ? '#63b3ed' : '#8b96ac'};min-width:12px;text-align:center">${score}</span>
-                        <button onclick="window.handleWorkVote(${w.id}, -1)" style="background:none;border:none;padding:2px;cursor:pointer;color:${userVoteType === -1 ? '#63b3ed' : '#8b96ac'};display:flex;align-items:center;transition:color 0.2s" class="hover:text-cyan-400">
-                            <span class="material-symbols-outlined" style="font-size:16px">arrow_downward</span>
-                        </button>
+
+                    <h3 style="color:#fff;font-size:16px;font-weight:600;line-height:1.3;margin-bottom:4px">${w.title}${w.subtitle ? `<span style='color:rgba(212,228,250,0.45);font-weight:400;font-size:13px'> — ${w.subtitle}</span>` : ''}</h3>
+                    <p style="color:#8b96ac;font-size:13px;margin-bottom:12px">Composer: ${composerName}</p>
+
+                    <p style="color:#a0aec0;font-size:12px;margin-bottom:12px;min-height:18px">
+                        <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;margin-right:4px">piano</span>${instruments || w.performer_combination || 'Instrumentation not specified'}
+                    </p>
+
+                    ${stylePills ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">${stylePills}</div>` : ''}
+
+                    <div style="border-top:1px solid rgba(255,255,255,0.06);margin-bottom:12px"></div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#E57373;font-size:11px;font-weight:600;letter-spacing:0.06em">
+                            ${[location, w.year].filter(Boolean).join(' · ')}
+                        </span>
+                        <span style="color:#8b96ac;font-size:11px;display:flex;align-items:center;gap:3px">${duration}</span>
                     </div>
-                </div>
+                </div>`;
+            } else {
+                const p = item.data;
+                const workTitle = p.work?.title || 'Unknown Work';
+                const composerName = p.work?.composer?.name
+                    || (p.work?.submitter ? `${p.work.submitter.first_name || ''} ${p.work.submitter.last_name || ''}`.trim() : '')
+                    || 'Unknown Composer';
+                const performerName = p.ensemble_name
+                    || (p.performer ? `${p.performer.first_name || ''} ${p.performer.last_name || ''}`.trim() : '')
+                    || 'Unknown Performer';
+                
+                const location = [p.venue, p.city, p.country].filter(Boolean).join(', ') || '—';
+                const dateStr = p.performance_date ? p.performance_date.split('-').reverse().join('/') : '—';
+                const hasMedia = p.recording_link ? `<span class="work-badge" style="background:rgba(99,179,237,0.12);color:#63b3ed;border:1px solid rgba(99,179,237,0.2)"><span class="material-symbols-outlined" style="font-size:11px;margin-right:2px">play_circle</span>Media</span>` : '';
+                
+                const insts = p.work?.work_instruments?.map(wi => wi.instrument_id).filter(Boolean) || [];
+                const instruments = insts.map(i => i.name).filter(Boolean).join(', ');
 
-                <!-- Title & Composer -->
-                <h3 style="color:#fff;font-size:16px;font-weight:600;line-height:1.3;margin-bottom:4px">${w.title}${w.subtitle ? `<span style='color:rgba(212,228,250,0.45);font-weight:400;font-size:13px'> — ${w.subtitle}</span>` : ''}</h3>
-                <p style="color:#8b96ac;font-size:13px;margin-bottom:12px">${composerName}</p>
+                const pData = encodeURIComponent(JSON.stringify(p)).replace(/'/g, "%27");
 
-                <!-- Instruments -->
-                <p style="color:#a0aec0;font-size:12px;margin-bottom:12px;min-height:18px">
-                    <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;margin-right:4px">piano</span>${instruments || w.performer_combination || 'Instrumentation not specified'}
-                </p>
+                return `
+                <div class="work-card" style="border: 1px solid rgba(99,179,237,0.15); cursor:pointer" onclick="window.openPerformanceModal('${pData}')">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                            <span class="work-badge" style="background:rgba(99,179,237,0.12);color:#63b3ed;border:1px solid rgba(99,179,237,0.2)">Interpretation</span>
+                            ${hasMedia}
+                        </div>
+                    </div>
 
-                <!-- Style tags -->
-                ${stylePills ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">${stylePills}</div>` : ''}
+                    <h3 style="color:#fff;font-size:16px;font-weight:600;line-height:1.3;margin-bottom:4px">Performed: ${workTitle}</h3>
+                    <p style="color:#8b96ac;font-size:13px;margin-bottom:4px">Composer: ${composerName}</p>
+                    <p style="color:#E57373;font-size:13px;font-weight:600;margin-bottom:12px">Interpreter: ${performerName}</p>
 
-                <!-- Divider -->
-                <div style="border-top:1px solid rgba(255,255,255,0.06);margin-bottom:12px"></div>
+                    <p style="color:#a0aec0;font-size:12px;margin-bottom:12px;min-height:18px">
+                        <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;margin-right:4px">piano</span>${instruments || p.work?.performer_combination || 'Instrumentation not specified'}
+                    </p>
 
-                <!-- Footer: country | year | duration -->
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                    <span style="color:#E57373;font-size:11px;font-weight:600;letter-spacing:0.06em">
-                        ${[location, w.year].filter(Boolean).join(' · ')}
-                    </span>
-                    <span style="color:#8b96ac;font-size:11px;display:flex;align-items:center;gap:3px">${duration}</span>
-                </div>
-            </div>`;
+                    <div style="border-top:1px solid rgba(255,255,255,0.06);margin-bottom:12px"></div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:#8b96ac;font-size:11px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${location}">
+                            ${location}
+                        </span>
+                        <span style="color:#E57373;font-size:11px;font-weight:600;font-mono">${dateStr}</span>
+                    </div>
+                </div>`;
+            }
         }).join('');
     }
 
@@ -1327,6 +1556,80 @@
         }
     };
 
+    window.openPerformanceModal = (pEncoded) => {
+        const p = JSON.parse(decodeURIComponent(pEncoded));
+        const workTitle = p.work?.title || 'Unknown Work';
+        const composerName = p.work?.composer?.name
+            || (p.work?.submitter ? `${p.work.submitter.first_name || ''} ${p.work.submitter.last_name || ''}`.trim() : '')
+            || 'Unknown Composer';
+        const performerName = p.ensemble_name
+            || (p.performer ? `${p.performer.first_name || ''} ${p.performer.last_name || ''}`.trim() : '')
+            || 'Unknown Performer';
+        const dateStr = p.performance_date ? p.performance_date.split('-').reverse().join('/') : '—';
+        const insts = p.work?.work_instruments?.map(wi => wi.instrument_id).filter(Boolean) || [];
+        const instruments = insts.map(i => i.name).filter(Boolean).join(', ') || '—';
+
+        const row = (label, value) => value
+            ? `<div class="modal-row"><span class="modal-label">${label}</span><span class="modal-value">${value}</span></div>`
+            : '';
+
+        document.getElementById('performance-modal').innerHTML = `
+            <!-- Close -->
+            <button onclick="window.closePerformanceModal()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.06);border:none;color:#d4e4fa;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center hover:bg-white/10 transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+
+            <!-- Header -->
+            <div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;padding-right:45px">
+                <span class="work-badge" style="background:rgba(99,179,237,0.12);color:#63b3ed;border:1px solid rgba(99,179,237,0.2)">Interpretation</span>
+            </div>
+            
+            <h2 style="color:#fff;font-size:24px;font-weight:700;margin:12px 0 4px;line-height:1.2">Performed: ${workTitle}</h2>
+            <p style="color:#8b96ac;font-size:14px;margin-bottom:4px">Composer: ${composerName}</p>
+            <p style="color:#E57373;font-size:14px;font-weight:600">Interpreter: ${performerName}</p>
+
+            <!-- General -->
+            <p class="modal-section-title">Performance Details</p>
+            ${row('Performance Date', dateStr)}
+            ${row('Event / Festival', p.event_name)}
+            ${row('Premiere Status', p.premiere_status)}
+            ${row('Conductor', p.conductor)}
+            ${row('Ensemble Name', p.ensemble_name)}
+            ${row('Venue', p.venue)}
+            ${row('City', p.city)}
+            ${row('Country', p.country)}
+
+            <!-- Instrumentation of the work -->
+            <p class="modal-section-title">Work Instrumentation</p>
+            ${row('Instruments', instruments)}
+            ${row('Combination', p.work?.performer_combination)}
+
+            <!-- Links & Media -->
+            ${p.recording_link || p.photo_link ? `
+            <p class="modal-section-title">Media Links</p>
+            ${p.recording_link ? `${row('Recording Link', `<a href="${p.recording_link}" target="_blank" style="color:#63b3ed;text-decoration:underline">Watch / Listen ↗</a>`)}` : ''}
+            ${p.photo_link ? `${row('Photo / Poster', `<a href="${p.photo_link}" target="_blank" style="color:#63b3ed;text-decoration:underline">View Photo ↗</a>`)}` : ''}
+            ` : ''}
+
+            <!-- Program Notes / Comments -->
+            ${p.program_notes ? `
+            <p class="modal-section-title">Program Notes</p>
+            <p style="color:#d4e4fa;font-size:13px;line-height:1.7;opacity:0.85">${p.program_notes}</p>
+            ` : ''}
+
+            ${p.performance_note ? `
+            <p class="modal-section-title">Performer Note</p>
+            <p style="color:#d4e4fa;font-size:13px;line-height:1.7;opacity:0.85">${p.performance_note}</p>
+            ` : ''}
+        `;
+
+        document.getElementById('performance-modal-backdrop').classList.add('open');
+    };
+
+    window.closePerformanceModal = () => {
+        document.getElementById('performance-modal-backdrop').classList.remove('open');
+    };
+
     // ── User Search & Public Profiles ────────────────────────────────
     window.openUserSearchModal = () => {
         const backdrop = document.getElementById('user-search-backdrop');
@@ -1358,11 +1661,11 @@
         clearTimeout(userSearchTimeout);
         userSearchTimeout = setTimeout(async () => {
             try {
-                // Search in profiles table matching first_name, last_name, or username
+                // Search in profiles table matching first_name, last_name, username, or performer_name
                 const { data: users, error } = await supabase
                     .from('profiles')
-                    .select('id, username, first_name, last_name, role, avatar_url, bio, nationality')
-                    .or(`username.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
+                    .select('id, username, first_name, last_name, performer_name, role, avatar_url, bio, nationality')
+                    .or(`username.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,performer_name.ilike.%${q}%`)
                     .limit(10);
 
                 if (error) {
@@ -1377,8 +1680,12 @@
                 }
 
                 resultsEl.innerHTML = users.map(user => {
-                    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Anonymous User';
-                    const initials = (user.first_name ? user.first_name[0] : '') + (user.last_name ? user.last_name[0] : '');
+                    const fullName = user.performer_name
+                        ? user.performer_name
+                        : `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Anonymous User';
+                    const initials = user.performer_name
+                        ? user.performer_name.split(' ').slice(0, 2).map(word => word[0]).join('')
+                        : (user.first_name ? user.first_name[0] : '') + (user.last_name ? user.last_name[0] : '');
                     const avatarHTML = user.avatar_url 
                         ? `<img src="${user.avatar_url}" class="w-10 h-10 rounded-xl object-cover border border-white/10">`
                         : `<div class="w-10 h-10 rounded-xl bg-salmon/10 border border-salmon/20 flex items-center justify-center text-salmon font-bold text-sm">${initials || '?'}</div>`;
@@ -3214,6 +3521,9 @@
 
         document.getElementById('work-modal-backdrop').addEventListener('click', e => {
             if (e.target === document.getElementById('work-modal-backdrop')) window.closeWorkModal();
+        });
+        document.getElementById('performance-modal-backdrop').addEventListener('click', e => {
+            if (e.target === document.getElementById('performance-modal-backdrop')) window.closePerformanceModal();
         });
         document.getElementById('user-search-backdrop').addEventListener('click', e => {
             if (e.target === document.getElementById('user-search-backdrop')) window.closeUserSearchModal();

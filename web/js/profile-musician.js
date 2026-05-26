@@ -31,7 +31,8 @@ async function loadProfile() {
     const firstName = profile.first_name || '---';
     const lastName = profile.last_name || '---';
     document.getElementById('profile-full-name').textContent = `${firstName} ${lastName}`;
-    document.getElementById('profile-role-badge').textContent = profile.role || 'User';
+    const displayRole = (profile.role && profile.role.toLowerCase() === 'musician') ? 'Performer' : (profile.role || 'User');
+    document.getElementById('profile-role-badge').textContent = displayRole;
     document.getElementById('profile-initials').textContent = (firstName[0] !== '-' ? firstName[0] : '?') + (lastName[0] !== '-' ? lastName[0] : '?');
 
     // Cargar Avatar si existe
@@ -77,15 +78,17 @@ async function loadProfile() {
 
 function calculateProgress(data) {
     let completed = 0;
-    const totalKeyFields = 4;
+    const totalKeyFields = 5;
 
     // 1. Nombre (performer_name)
     if (data.performer_name && typeof data.performer_name === 'string' && data.performer_name.trim() !== '') completed++;
-    // 2. Foto (avatar_url)
-    if (data.avatar_url && typeof data.avatar_url === 'string' && data.avatar_url.trim() !== '') completed++;
-    // 3. Ciudad base / Nacionalidad
+    // 2. Tipo de entidad (entity_type)
+    if (data.entity_type && typeof data.entity_type === 'string' && data.entity_type.trim() !== '') completed++;
+    // 3. Año de fundación (foundation_year)
+    if (data.foundation_year && String(data.foundation_year).trim() !== '') completed++;
+    // 4. Ciudad base / Nacionalidad
     if (data.base_city && typeof data.base_city === 'string' && data.base_city.trim() !== '') completed++;
-    // 4. Bio
+    // 5. Bio
     if (data.bio && typeof data.bio === 'string' && data.bio.trim() !== '') completed++;
 
     const progress = Math.min(100, Math.round((completed / totalKeyFields) * 100));
@@ -155,7 +158,7 @@ async function saveProfile() {
         }
         
         setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'musician.html';
         }, 1500);
     } else {
         alert("Warning: No data saved. Please check your Supabase RLS policies.");

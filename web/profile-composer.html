@@ -78,9 +78,13 @@
 <body class="bg-surface-container-lowest text-on-surface font-sans selection:bg-salmon selection:text-white">
 
 <nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 h-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/10">
-    <a href="index.html" class="text-2xl font-bold tracking-tighter text-white">HAPHEMUSIC</a>
-    <div id="auth-header">
-        <!-- Se llena dinámicamente por auth.js -->
+    <a href="index.html" class="text-2xl font-bold tracking-tighter text-white hover:text-salmon transition-all duration-300">HAPHEMUSIC</a>
+    <div class="flex items-center gap-3">
+        <a href="composer.html" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all duration-200 text-sm font-bold">
+            <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+            Back
+        </a>
+        <div id="auth-header"></div>
     </div>
 </nav>
 
@@ -289,8 +293,9 @@
                 <span class="material-symbols-outlined">save</span>
                 Save & Update Profile
             </button>
-            <a href="index.html" class="px-10 py-4 rounded-full bg-white/5 text-white font-bold border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center">
-                Cancel
+            <a href="composer.html" class="px-10 py-4 rounded-full bg-white/5 text-white font-bold border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+                Back without saving
             </a>
         </div>
     </form>

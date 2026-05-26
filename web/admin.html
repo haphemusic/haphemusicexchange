@@ -55,11 +55,12 @@
     <!-- Sidebar -->
     <aside class="w-64 bg-slate-950/50 border-r border-white/10 flex flex-col z-20">
         <div class="p-8">
-            <h1 class="text-xl font-bold text-white tracking-tighter flex items-center gap-2">
-                <span class="material-symbols-outlined text-salmon">curator</span>
+            <a href="index.html" class="text-2xl font-bold tracking-tighter text-white hover:text-salmon transition-colors block mb-2">HAPHEMUSIC</a>
+            <h1 class="text-sm font-bold text-slate-400 tracking-tighter flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-salmon w-5 h-5 overflow-hidden inline-flex items-center justify-center" style="min-width: 20px; font-size: 16px;">curator</span>
                 Curator Hub
             </h1>
-            <p class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">System Management</p>
+            <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">System Management</p>
         </div>
 
         <nav class="flex-1 px-4 space-y-2">
@@ -74,6 +75,10 @@
             <a href="#instruments" onclick="showSection('instruments')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all" id="nav-instruments">
                 <span class="material-symbols-outlined">piano</span>
                 Instrument Database
+            </a>
+            <a href="#pieces" onclick="showSection('pieces')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all" id="nav-pieces">
+                <span class="material-symbols-outlined">library_music</span>
+                Pieces
             </a>
         </nav>
 
@@ -185,8 +190,40 @@
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="instrument-grid">
+                <div class="flex gap-6 overflow-x-auto pb-6" id="instrument-board">
                     <!-- Loaded via JS -->
+                </div>
+            </section>
+
+            <!-- SECTION: PIECES -->
+            <section id="section-pieces" class="hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Registered Pieces</h2>
+                        <p class="text-sm text-slate-500">Monitor and manage the uploaded musical catalog.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="pieces-search-input" oninput="window.filterPieces(this.value)" placeholder="Search piece, composer or uploader..." class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-salmon w-64">
+                    </div>
+                </div>
+                <div class="glass-panel rounded-3xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-white/5">
+                                <tr>
+                                    <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Piece / Work</th>
+                                    <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Composer</th>
+                                    <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Uploaded By</th>
+                                    <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Year / Duration</th>
+                                    <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Difficulty / Category</th>
+                                    <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-pieces-table" class="divide-y divide-white/5">
+                                <!-- JS Loaded -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 

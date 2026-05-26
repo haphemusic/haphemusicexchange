@@ -288,11 +288,12 @@
     <!-- Sidebar -->
     <aside class="w-64 bg-slate-950/50 border-r border-white/10 flex flex-col z-20">
         <div class="p-8">
-            <h1 class="text-xl font-bold text-white tracking-tighter flex items-center gap-2">
-                <span class="material-symbols-outlined text-salmon w-6 h-6 overflow-hidden inline-flex items-center justify-center" style="min-width: 24px;">auto_awesome</span>
+            <a href="index.html" class="text-2xl font-bold tracking-tighter text-white hover:text-salmon transition-colors block mb-2">HAPHEMUSIC</a>
+            <h1 class="text-sm font-bold text-slate-400 tracking-tighter flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-salmon w-5 h-5 overflow-hidden inline-flex items-center justify-center" style="min-width: 20px; font-size: 16px;">auto_awesome</span>
                 Composer Hub
             </h1>
-            <p class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Professional Network</p>
+            <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">Professional Network</p>
         </div>
 
         <nav class="flex-1 px-4 space-y-2">
@@ -390,7 +391,7 @@
                     <div class="glass-panel p-6 rounded-3xl space-y-4">
                         <h3 class="text-lg font-bold text-white">Quick Actions</h3>
                         <div class="grid grid-cols-2 gap-4">
-                            <button onclick="showSection('feed')" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-center group">
+                            <button onclick="showSection('feed'); setTimeout(() => openWorkModal(), 100);" class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-center group">
                                 <span class="material-symbols-outlined text-3xl text-salmon mb-2 group-hover:scale-110 transition-transform">add_box</span>
                                 <p class="text-xs font-bold text-white uppercase">Register Work</p>
                             </button>

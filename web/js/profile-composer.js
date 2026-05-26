@@ -168,7 +168,7 @@ async function saveProfile() {
         }
         
         setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'composer.html';
         }, 1500);
     } else {
         alert("Warning: No data saved. Please check your Supabase RLS policies.");

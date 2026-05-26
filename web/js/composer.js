@@ -326,7 +326,8 @@ async function loadValidations() {
         const performerName = v.performer 
             ? `${v.performer.first_name || ''} ${v.performer.last_name || ''}`.trim() || 'Performer/Ensemble'
             : 'Unknown Performer/Ensemble';
-        const performerRole = v.performer?.role || 'musician';
+        let performerRole = v.performer?.role || 'performer';
+        if (performerRole.toLowerCase() === 'musician') performerRole = 'performer';
         return `
         <div class="glass-panel p-6 rounded-3xl flex items-center gap-6 group hover:border-salmon/30 transition-all">
             <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center">

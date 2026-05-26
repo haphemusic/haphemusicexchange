@@ -209,7 +209,7 @@ window.submitInterpretation = async () => {
             // Create a new work
             const { data: newWork, error: newWorkError } = await supabase
                 .from('works')
-                .insert({ title: searchInput, status: 'pending' })
+                .insert({ title: searchInput, status: 'pending', submitted_by: currentUser.id })
                 .select('id')
                 .single();
 
@@ -348,7 +348,7 @@ window.processCSV = (event) => {
                     console.log(`Work not found, creating: ${title}`);
                     const { data: newWork, error: newWorkError } = await supabase
                         .from('works')
-                        .insert({ title: title, status: 'pending' })
+                        .insert({ title: title, status: 'pending', submitted_by: currentUser.id })
                         .select('id')
                         .single();
 
@@ -942,7 +942,8 @@ window.submitBulkImport = async () => {
                     .insert({ 
                         title: p.work_title, 
                         composer_id: composerId,
-                        status: 'pending' 
+                        status: 'pending',
+                        submitted_by: currentUser.id
                     })
                     .select('id')
                     .single();
