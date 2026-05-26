@@ -85,10 +85,23 @@ async function loadSubmissions() {
         return 'Unknown';
     };
 
+    const getVisibilityIcon = (isHidden) => {
+        return isHidden
+            ? `<span class="material-symbols-outlined text-slate-500" style="font-size:18px; line-height:1;" title="Hidden from public">visibility_off</span>`
+            : `<span class="material-symbols-outlined text-emerald-400" style="font-size:18px; line-height:1;" title="Visible to public">visibility</span>`;
+    };
+
     // Render table (Top 5)
-    tableBody.innerHTML = submissions.slice(0, 5).map(s => `
+    tableBody.innerHTML = submissions.slice(0, 5).map(s => {
+        const isHidden = s.hide_public === true;
+        return `
         <tr class="hover:bg-white/2 transition-colors">
-            <td class="px-6 py-4 font-bold text-white text-sm">${s.work?.title || 'Unknown Work'}</td>
+            <td class="px-6 py-4 font-bold text-white text-sm">
+                <div class="inline-flex items-center gap-2">
+                    ${getVisibilityIcon(isHidden)}
+                    <span>${s.work?.title || 'Unknown Work'}</span>
+                </div>
+            </td>
             <td class="px-6 py-4 text-slate-400 text-sm">${getComposerName(s.work)}</td>
             <td class="px-6 py-4">
                 <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
@@ -102,15 +115,21 @@ async function loadSubmissions() {
                 </button>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 
     // Render full cards
-    fullList.innerHTML = submissions.map(s => `
+    fullList.innerHTML = submissions.map(s => {
+        const isHidden = s.hide_public === true;
+        return `
         <div class="glass-panel p-6 rounded-3xl space-y-3 relative group">
             <div class="flex justify-between items-start">
                 <div>
-                    <h4 class="font-bold text-white">${s.work?.title || 'Unknown Work'}</h4>
-                    <p class="text-xs text-slate-500">Composer: ${getComposerName(s.work)}</p>
+                    <div class="inline-flex items-center gap-2">
+                        ${getVisibilityIcon(isHidden)}
+                        <h4 class="font-bold text-white">${s.work?.title || 'Unknown Work'}</h4>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Composer: ${getComposerName(s.work)}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
@@ -133,7 +152,8 @@ async function loadSubmissions() {
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 let editingPerformanceId = null;
@@ -159,6 +179,7 @@ function resetSubmissionForm() {
     document.getElementById('perf-photo').value = '';
     document.getElementById('perf-notes').value = '';
     document.getElementById('perf-feedback').value = '';
+    document.getElementById('perf-hide-public').checked = false;
 }
 
 function getStatusClass(status) {
@@ -263,6 +284,7 @@ window.submitInterpretation = async () => {
     const photo = document.getElementById('perf-photo').value;
     const notes = document.getElementById('perf-notes').value;
     const feedback = document.getElementById('perf-feedback').value;
+    const hidePublic = document.getElementById('perf-hide-public').checked;
 
     if (!workId) return alert("Please select a work from the archive.");
     if (!date) return alert("Please select a performance date.");
@@ -280,7 +302,8 @@ window.submitInterpretation = async () => {
         recording_link: link,
         photo_link: photo,
         program_notes: notes,
-        performance_note: feedback
+        performance_note: feedback,
+        hide_public: hidePublic
     };
 
     let error;
@@ -528,6 +551,7 @@ window.openEditSubmission = async (id) => {
     document.getElementById('perf-photo').value = submission.photo_link || '';
     document.getElementById('perf-notes').value = submission.program_notes || '';
     document.getElementById('perf-feedback').value = submission.performance_note || '';
+    document.getElementById('perf-hide-public').checked = submission.hide_public === true;
 
     document.getElementById('submission-modal').classList.remove('hidden');
     document.getElementById('submission-modal').classList.add('flex');
