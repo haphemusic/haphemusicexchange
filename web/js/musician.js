@@ -93,8 +93,11 @@ async function loadSubmissions() {
             <td class="px-6 py-4">
                 <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
             </td>
-            <td class="px-6 py-4 text-right">
-                <button onclick="deletePerformance(${s.id})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-2 rounded-xl transition-all flex items-center justify-center ml-auto">
+            <td class="px-6 py-4 text-right flex items-center justify-end gap-2">
+                <button onclick="openEditSubmission(${s.id})" class="text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 p-2 rounded-xl transition-all flex items-center justify-center">
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                </button>
+                <button onclick="deletePerformance(${s.id})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-2 rounded-xl transition-all flex items-center justify-center">
                     <span class="material-symbols-outlined text-sm">delete</span>
                 </button>
             </td>
@@ -111,6 +114,9 @@ async function loadSubmissions() {
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="status-badge ${getStatusClass(s.status)}">${s.status}</span>
+                    <button onclick="openEditSubmission(${s.id})" class="text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 p-1.5 rounded-lg transition-all">
+                        <span class="material-symbols-outlined text-sm">edit</span>
+                    </button>
                     <button onclick="deletePerformance(${s.id})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 p-1.5 rounded-lg transition-all">
                         <span class="material-symbols-outlined text-sm">delete</span>
                     </button>
@@ -128,6 +134,31 @@ async function loadSubmissions() {
             </div>
         </div>
     `).join('');
+}
+
+let editingPerformanceId = null;
+
+function resetSubmissionForm() {
+    editingPerformanceId = null;
+    document.getElementById('submission-modal-title').textContent = 'Register Interpretation';
+    document.getElementById('submission-submit-btn').textContent = 'Submit for Validation';
+    document.getElementById('search-work-input').value = '';
+    document.getElementById('selected-work-id').value = '';
+    document.getElementById('selected-title').textContent = '---';
+    document.getElementById('selected-composer').textContent = '---';
+    document.getElementById('selected-work-info').classList.add('hidden');
+    document.getElementById('perf-date').value = '';
+    document.getElementById('perf-event').value = '';
+    document.getElementById('perf-premiere').value = 'Standard Performance';
+    document.getElementById('perf-ensemble').value = '';
+    document.getElementById('perf-conductor').value = '';
+    document.getElementById('perf-venue').value = '';
+    document.getElementById('perf-city').value = '';
+    document.getElementById('perf-country').value = '';
+    document.getElementById('perf-link').value = '';
+    document.getElementById('perf-photo').value = '';
+    document.getElementById('perf-notes').value = '';
+    document.getElementById('perf-feedback').value = '';
 }
 
 function getStatusClass(status) {
@@ -236,49 +267,47 @@ window.submitInterpretation = async () => {
     if (!workId) return alert("Please select a work from the archive.");
     if (!date) return alert("Please select a performance date.");
 
-    const { error } = await supabase
-        .from('performances')
-        .insert({
-            work_id: workId,
-            performer_id: currentUser.id,
-            performance_date: date,
-            event_name: event,
-            venue: venue,
-            city: city,
-            country: country,
-            premiere_status: premiere,
-            ensemble_name: ensemble,
-            conductor: conductor,
-            recording_link: link,
-            photo_link: photo,
-            program_notes: notes,
-            performance_note: feedback,
-            status: 'pending' // Pending validation by composer
-        });
+    const performanceData = {
+        work_id: workId,
+        performance_date: date,
+        event_name: event,
+        venue: venue,
+        city: city,
+        country: country,
+        premiere_status: premiere,
+        ensemble_name: ensemble,
+        conductor: conductor,
+        recording_link: link,
+        photo_link: photo,
+        program_notes: notes,
+        performance_note: feedback
+    };
+
+    let error;
+    if (editingPerformanceId) {
+        const response = await supabase
+            .from('performances')
+            .update(performanceData)
+            .eq('id', editingPerformanceId);
+        error = response.error;
+    } else {
+        const response = await supabase
+            .from('performances')
+            .insert({
+                ...performanceData,
+                performer_id: currentUser.id,
+                status: 'pending'
+            });
+        error = response.error;
+    }
 
     if (error) {
         alert("Error submitting: " + error.message);
     } else {
-        alert("Interpretation submitted! The composer will be notified.");
+        const successMessage = editingPerformanceId ? "Interpretation updated successfully." : "Interpretation submitted! The composer will be notified.";
+        alert(successMessage);
         closeSubmissionModal();
-
-        // Reset form fields
-        document.getElementById('selected-work-id').value = '';
-        document.getElementById('selected-title').textContent = '---';
-        document.getElementById('selected-composer').textContent = '---';
-        document.getElementById('selected-work-info').classList.add('hidden');
-        document.getElementById('search-work-input').value = '';
-        document.getElementById('perf-date').value = '';
-        document.getElementById('perf-event').value = '';
-        document.getElementById('perf-ensemble').value = '';
-        document.getElementById('perf-conductor').value = '';
-        document.getElementById('perf-venue').value = '';
-        document.getElementById('perf-city').value = '';
-        document.getElementById('perf-country').value = '';
-        document.getElementById('perf-link').value = '';
-        document.getElementById('perf-photo').value = '';
-        document.getElementById('perf-notes').value = '';
-        document.getElementById('perf-feedback').value = '';
+        resetSubmissionForm();
 
         await loadStats();
         await loadSubmissions();
@@ -450,8 +479,59 @@ function showSection(sectionId) {
 }
 
 window.showSection = showSection;
-window.openSubmissionModal = () => document.getElementById('submission-modal').classList.remove('hidden', 'flex') || document.getElementById('submission-modal').classList.add('flex');
-window.closeSubmissionModal = () => document.getElementById('submission-modal').classList.add('hidden') || document.getElementById('submission-modal').classList.remove('flex');
+window.openSubmissionModal = () => {
+    resetSubmissionForm();
+    document.getElementById('submission-modal').classList.remove('hidden');
+    document.getElementById('submission-modal').classList.add('flex');
+};
+window.closeSubmissionModal = () => {
+    document.getElementById('submission-modal').classList.add('hidden');
+    document.getElementById('submission-modal').classList.remove('flex');
+};
+window.openEditSubmission = async (id) => {
+    const { data: submission, error } = await supabase
+        .from('performances')
+        .select(`*, work:work_id (title, composer:composer_id(name))`)
+        .eq('id', id)
+        .single();
+
+    if (error || !submission) {
+        alert('Error loading submission for edit.');
+        return;
+    }
+    if (submission.performer_id !== currentUser.id) {
+        alert('You may only edit your own submissions.');
+        return;
+    }
+
+    editingPerformanceId = id;
+    const titleEl = document.getElementById('submission-modal-title');
+    const submitBtn = document.getElementById('submission-submit-btn');
+    if (titleEl) titleEl.textContent = 'Edit Interpretation';
+    if (submitBtn) submitBtn.textContent = 'Save Changes';
+
+    document.getElementById('search-work-input').value = ''; 
+    document.getElementById('selected-work-id').value = submission.work_id;
+    document.getElementById('selected-title').textContent = submission.work?.title || 'Unknown Work';
+    document.getElementById('selected-composer').textContent = submission.work?.composer?.name || 'Unknown Composer';
+    document.getElementById('selected-work-info').classList.remove('hidden');
+
+    document.getElementById('perf-date').value = submission.performance_date || '';
+    document.getElementById('perf-event').value = submission.event_name || '';
+    document.getElementById('perf-premiere').value = submission.premiere_status || 'Standard Performance';
+    document.getElementById('perf-ensemble').value = submission.ensemble_name || '';
+    document.getElementById('perf-conductor').value = submission.conductor || '';
+    document.getElementById('perf-venue').value = submission.venue || '';
+    document.getElementById('perf-city').value = submission.city || '';
+    document.getElementById('perf-country').value = submission.country || '';
+    document.getElementById('perf-link').value = submission.recording_link || '';
+    document.getElementById('perf-photo').value = submission.photo_link || '';
+    document.getElementById('perf-notes').value = submission.program_notes || '';
+    document.getElementById('perf-feedback').value = submission.performance_note || '';
+
+    document.getElementById('submission-modal').classList.remove('hidden');
+    document.getElementById('submission-modal').classList.add('flex');
+};
 window.deletePerformance = async (id) => {
     if (!confirm("Are you sure you want to delete this interpretation?")) return;
 
