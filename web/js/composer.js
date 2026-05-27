@@ -362,10 +362,10 @@ async function loadValidations() {
         .select(`
             *,
             performer:performer_id (first_name, last_name, role),
-            work:work_id!inner (title, submitted_by)
+            work:work_id!inner (title, submitted_by, composer_profile_id)
         `)
         .eq('status', 'pending')
-        .eq('work.submitted_by', currentUser.id);
+        .or(`composer_profile_id.eq.${currentUser.id},and(composer_profile_id.is.null,submitted_by.eq.${currentUser.id})`, { foreignTable: 'work' });
 
     if (error || !validations || validations.length === 0) {
         container.innerHTML = '<p class="text-sm text-slate-500 py-10 text-center">No pending validation requests.</p>';

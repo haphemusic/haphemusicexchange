@@ -13,7 +13,7 @@ BEGIN
     SELECT id INTO matching_profile_id
     FROM public.profiles
     WHERE role = 'composer'
-      AND LOWER(TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, ''))) = LOWER(TRIM(NEW.composer_name))
+      AND LOWER(REGEXP_REPLACE(TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')), '\s+', ' ', 'g')) = LOWER(REGEXP_REPLACE(TRIM(NEW.composer_name), '\s+', ' ', 'g'))
     LIMIT 1;
     
     IF matching_profile_id IS NOT NULL THEN
@@ -42,7 +42,7 @@ BEGIN
     SET composer_profile_id = NEW.id
     WHERE composer_profile_id IS NULL
       AND composer_name IS NOT NULL
-      AND LOWER(TRIM(composer_name)) = LOWER(TRIM(COALESCE(NEW.first_name, '') || ' ' || COALESCE(NEW.last_name, '')));
+      AND LOWER(REGEXP_REPLACE(TRIM(composer_name), '\s+', ' ', 'g')) = LOWER(REGEXP_REPLACE(TRIM(COALESCE(NEW.first_name, '') || ' ' || COALESCE(NEW.last_name, '')), '\s+', ' ', 'g'));
   END IF;
   RETURN NEW;
 END;
@@ -54,3 +54,13 @@ DROP TRIGGER IF EXISTS on_profile_composer_link ON public.profiles;
 CREATE TRIGGER on_profile_composer_link
   AFTER INSERT OR UPDATE OF first_name, last_name, role ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.link_works_to_composer();
+
+
+-- 4. VINCULACIÓN RETROACTIVA DE OBRAS EXISTENTES (Corrige nombres con espacios desiguales como "las  cigarreras" vs "las cigarreras")
+UPDATE public.works w
+SET composer_profile_id = p.id
+FROM public.profiles p
+WHERE w.composer_profile_id IS NULL
+  AND w.composer_name IS NOT NULL
+  AND p.role = 'composer'
+  AND LOWER(REGEXP_REPLACE(TRIM(w.composer_name), '\s+', ' ', 'g')) = LOWER(REGEXP_REPLACE(TRIM(COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '')), '\s+', ' ', 'g'));
