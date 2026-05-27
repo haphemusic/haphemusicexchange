@@ -60,7 +60,10 @@ async function loadSubmissions() {
             *,
             work:work_id (
                 title,
+                composer_name,
+                composer_profile_id,
                 composer:composer_id (name),
+                composer_profile:composer_profile_id(first_name, last_name, name),
                 profiles:submitted_by (first_name, last_name)
             )
         `)
@@ -78,6 +81,10 @@ async function loadSubmissions() {
 
     const getComposerName = (work) => {
         if (!work) return 'Unknown';
+        if (work.composer_name) return work.composer_name;
+        if (work.composer_profile) {
+            return work.composer_profile.name || `${work.composer_profile.first_name || ''} ${work.composer_profile.last_name || ''}`.trim() || 'Unknown';
+        }
         if (work.composer?.name) return work.composer.name;
         if (work.profiles) {
             return `${work.profiles.first_name || ''} ${work.profiles.last_name || ''}`.trim() || 'Unknown';
@@ -180,6 +187,10 @@ function resetSubmissionForm() {
     document.getElementById('perf-notes').value = '';
     document.getElementById('perf-feedback').value = '';
     document.getElementById('perf-hide-public').checked = false;
+    
+    document.getElementById('search-work-composer').value = '';
+    const manualComposerField = document.getElementById('manual-composer-field');
+    if (manualComposerField) manualComposerField.classList.remove('hidden');
 }
 
 function getStatusClass(status) {
@@ -206,7 +217,10 @@ window.searchWorks = async (query) => {
             .from('works')
             .select(`
                 *,
-                composer:composer_id (name)
+                composer_name,
+                composer_profile_id,
+                composer:composer_id (name),
+                composer_profile:composer_profile_id(first_name, last_name, name)
             `)
             .ilike('title', `%${query}%`)
             .eq('status', 'validated') // Only search for works already validated by composers
@@ -214,11 +228,14 @@ window.searchWorks = async (query) => {
 
         if (works && works.length > 0) {
             resultsDiv.innerHTML = works.map(w => {
-                const composerName = w.composer ? w.composer.name.replace(/'/g, "\\'") : 'Unknown';
+                const composerName = w.composer_name
+                    || (w.composer_profile ? (w.composer_profile.name || `${w.composer_profile.first_name || ''} ${w.composer_profile.last_name || ''}`.trim()) : '')
+                    || w.composer?.name
+                    || 'Unknown';
                 return `
-                <div onclick="selectWork(${w.id}, '${w.title.replace(/'/g, "\\'")}', '${composerName}')" class="p-3 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0">
+                <div onclick="selectWork(${w.id}, '${w.title.replace(/'/g, "\\'")}', '${composerName.replace(/'/g, "\\'")}')" class="p-3 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0">
                     <p class="text-sm font-bold text-white">${w.title}</p>
-                    <p class="text-[10px] text-slate-500 uppercase">${w.composer?.name || 'Unknown'}</p>
+                    <p class="text-[10px] text-slate-500 uppercase">${composerName}</p>
                 </div>
             `}).join('');
             resultsDiv.classList.remove('hidden');
@@ -236,6 +253,9 @@ window.selectWork = (id, title, composer) => {
     document.getElementById('selected-work-info').classList.remove('hidden');
     document.getElementById('search-results').classList.add('hidden');
     document.getElementById('search-work-input').value = '';
+    
+    const manualComposerField = document.getElementById('manual-composer-field');
+    if (manualComposerField) manualComposerField.classList.add('hidden');
 };
 
 window.submitInterpretation = async () => {
@@ -259,9 +279,15 @@ window.submitInterpretation = async () => {
             workId = existingWorks[0].id;
         } else {
             // Create a new work
+            const composerNameVal = document.getElementById('search-work-composer').value.trim() || null;
             const { data: newWork, error: newWorkError } = await supabase
                 .from('works')
-                .insert({ title: searchInput, status: 'pending', submitted_by: currentUser.id })
+                .insert({ 
+                    title: searchInput, 
+                    composer_name: composerNameVal,
+                    status: 'pending', 
+                    submitted_by: currentUser.id 
+                })
                 .select('id')
                 .single();
 
@@ -396,11 +422,18 @@ window.processCSV = (event) => {
                     .ilike('title', '%' + title + '%')
                     .limit(1);
 
+                const composerNameVal = row['Composer Name'] || row['Composer'] || row['composer'] || row['composer_name'] || row['Nombre Compositor'] || null;
+
                 if (!works || works.length === 0) {
                     console.log(`Work not found, creating: ${title}`);
                     const { data: newWork, error: newWorkError } = await supabase
                         .from('works')
-                        .insert({ title: title, status: 'pending', submitted_by: currentUser.id })
+                        .insert({ 
+                            title: title, 
+                            composer_name: composerNameVal,
+                            status: 'pending', 
+                            submitted_by: currentUser.id 
+                        })
                         .select('id')
                         .single();
 
@@ -514,7 +547,13 @@ window.closeSubmissionModal = () => {
 window.openEditSubmission = async (id) => {
     const { data: submission, error } = await supabase
         .from('performances')
-        .select(`*, work:work_id (title, composer:composer_id(name))`)
+        .select(`*, work:work_id (
+            title,
+            composer_name,
+            composer_profile_id,
+            composer:composer_id(name),
+            composer_profile:composer_profile_id(first_name, last_name, name)
+        )`)
         .eq('id', id)
         .single();
 
@@ -536,8 +575,16 @@ window.openEditSubmission = async (id) => {
     document.getElementById('search-work-input').value = ''; 
     document.getElementById('selected-work-id').value = submission.work_id;
     document.getElementById('selected-title').textContent = submission.work?.title || 'Unknown Work';
-    document.getElementById('selected-composer').textContent = submission.work?.composer?.name || 'Unknown Composer';
+    
+    const workComposer = submission.work?.composer_name
+        || (submission.work?.composer_profile ? (submission.work.composer_profile.name || `${submission.work.composer_profile.first_name || ''} ${submission.work.composer_profile.last_name || ''}`.trim()) : '')
+        || submission.work?.composer?.name
+        || 'Unknown Composer';
+    document.getElementById('selected-composer').textContent = workComposer;
     document.getElementById('selected-work-info').classList.remove('hidden');
+    
+    const manualComposerField = document.getElementById('manual-composer-field');
+    if (manualComposerField) manualComposerField.classList.add('hidden');
 
     document.getElementById('perf-date').value = submission.performance_date || '';
     document.getElementById('perf-event').value = submission.event_name || '';
@@ -1046,6 +1093,7 @@ window.submitBulkImport = async () => {
                     .insert({ 
                         title: p.work_title, 
                         composer_id: composerId,
+                        composer_name: p.composer_name,
                         status: 'pending',
                         submitted_by: currentUser.id
                     })

@@ -725,7 +725,10 @@
                 program_notes, style_tags, language_librettist,
                 technical_difficulty, space_requirements, additional_info,
                 status, created_at,
+                composer_name,
+                composer_profile_id,
                 composer:composer_id(name, nationality, period),
+                composer_profile:composer_profile_id(first_name, last_name, name),
                 submitter:submitted_by(first_name, last_name)
             `)
             .eq('status', 'validated');
@@ -911,7 +914,7 @@
             promises.push(
                 supabase
                     .from('works')
-                    .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
+                    .select('*, composer:composer_id(*), composer_profile:composer_profile_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
                     .eq('status', 'validated')
                     .then(({ data, error }) => {
                         if (error) console.error("Error fetching works:", error);
@@ -923,7 +926,7 @@
             promises.push(
                 supabase
                     .from('performances')
-                    .select('*, work:work_id(*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))), performer:performer_id(*)')
+                    .select('*, work:work_id(*, composer:composer_id(*), composer_profile:composer_profile_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))), performer:performer_id(*)')
                     .eq('status', 'validated')
                     .then(({ data, error }) => {
                         if (error) console.error("Error fetching performances:", error);
@@ -969,7 +972,7 @@
             if (duration !== null && (duration < df || duration > dt)) return false;
 
             if (co) {
-                const composerCountry = w.composer?.nationality;
+                const composerCountry = w.composer?.nationality || w.composer_profile?.nationality;
                 const submitterCountry = w.submitter?.residence_country || w.submitter?.nationality;
                 const matchComposer = composerCountry && isCountryMatch(composerCountry, co);
                 const matchSubmitter = submitterCountry && isCountryMatch(submitterCountry, co);
@@ -977,7 +980,7 @@
             }
 
             if (ge) {
-                const composerGender = w.composer?.gender;
+                const composerGender = w.composer?.gender || w.composer_profile?.gender;
                 const submitterGender = w.submitter?.gender;
                 const matchComposer = composerGender && composerGender.toLowerCase() === ge.toLowerCase();
                 const matchSubmitter = submitterGender && submitterGender.toLowerCase() === ge.toLowerCase();
@@ -1019,7 +1022,12 @@
             if (searchTerm) {
                 const title = w.title?.toLowerCase() || '';
                 const subtitle = w.subtitle?.toLowerCase() || '';
-                const composerName = w.composer?.name?.toLowerCase() || '';
+                const composerName = (
+                    w.composer_name
+                    || (w.composer_profile ? (w.composer_profile.name || `${w.composer_profile.first_name || ''} ${w.composer_profile.last_name || ''}`.trim()) : '')
+                    || w.composer?.name
+                    || ''
+                ).toLowerCase();
                 const submitterName = `${w.submitter?.first_name || ''} ${w.submitter?.last_name || ''}`.trim().toLowerCase();
                 const performerCombination = w.performer_combination?.toLowerCase() || '';
                 const instrumentText = (w.work_instruments || [])
@@ -1044,7 +1052,7 @@
             if (duration !== null && (duration < df || duration > dt)) return false;
 
             if (co) {
-                const compCountry = p.work?.composer?.nationality;
+                const compCountry = p.work?.composer?.nationality || p.work?.composer_profile?.nationality;
                 const subCountry = p.work?.submitter?.residence_country || p.work?.submitter?.nationality;
                 const perfCountry = p.performer?.nationality || p.country;
                 const matchComposer = compCountry && isCountryMatch(compCountry, co);
@@ -1054,7 +1062,7 @@
             }
 
             if (ge) {
-                const compGender = p.work?.composer?.gender;
+                const compGender = p.work?.composer?.gender || p.work?.composer_profile?.gender;
                 const subGender = p.work?.submitter?.gender;
                 const perfGender = p.performer?.gender;
                 const matchComposer = compGender && compGender.toLowerCase() === ge;
@@ -1099,7 +1107,12 @@
             if (searchTerm) {
                 const title = p.work?.title?.toLowerCase() || '';
                 const subtitle = p.work?.subtitle?.toLowerCase() || '';
-                const composerName = p.work?.composer?.name?.toLowerCase() || '';
+                const composerName = (
+                    p.work?.composer_name
+                    || (p.work?.composer_profile ? (p.work.composer_profile.name || `${p.work.composer_profile.first_name || ''} ${p.work.composer_profile.last_name || ''}`.trim()) : '')
+                    || p.work?.composer?.name
+                    || ''
+                ).toLowerCase();
                 const submitterName = `${p.work?.submitter?.first_name || ''} ${p.work?.submitter?.last_name || ''}`.trim().toLowerCase();
                 const performerName = p.performer?.performer_name?.toLowerCase() || `${p.performer?.first_name || ''} ${p.performer?.last_name || ''}`.trim().toLowerCase();
                 const ensembleName = p.ensemble_name?.toLowerCase() || '';
@@ -1288,7 +1301,9 @@
         grid.innerHTML = worksToRender.map(item => {
             if (item.type === 'work') {
                 const w = item.data;
-                const composerName = w.composer?.name
+                const composerName = w.composer_name
+                    || (w.composer_profile ? (w.composer_profile.name || `${w.composer_profile.first_name || ''} ${w.composer_profile.last_name || ''}`.trim()) : '')
+                    || w.composer?.name
                     || (w.submitter ? `${w.submitter.first_name || ''} ${w.submitter.last_name || ''}`.trim() : '')
                     || 'Unknown Composer';
                     
@@ -1355,7 +1370,9 @@
             } else {
                 const p = item.data;
                 const workTitle = p.work?.title || 'Unknown Work';
-                const composerName = p.work?.composer?.name
+                const composerName = p.work?.composer_name
+                    || (p.work?.composer_profile ? (p.work.composer_profile.name || `${p.work.composer_profile.first_name || ''} ${p.work.composer_profile.last_name || ''}`.trim()) : '')
+                    || p.work?.composer?.name
                     || (p.work?.submitter ? `${p.work.submitter.first_name || ''} ${p.work.submitter.last_name || ''}`.trim() : '')
                     || 'Unknown Composer';
                 const performerName = p.ensemble_name
@@ -1430,7 +1447,9 @@
     window.openWorkModal = (wEncoded, instEncoded, shouldPushState = true) => {
         const w    = JSON.parse(decodeURIComponent(wEncoded));
         const inst = JSON.parse(decodeURIComponent(instEncoded));
-        const composerName = w.composer?.name
+        const composerName = w.composer_name
+            || (w.composer_profile ? (w.composer_profile.name || `${w.composer_profile.first_name || ''} ${w.composer_profile.last_name || ''}`.trim()) : '')
+            || w.composer?.name
             || (w.submitter ? `${w.submitter.first_name || ''} ${w.submitter.last_name || ''}`.trim() : '')
             || 'Unknown Composer';
         const country      = w.composer?.nationality || w.submitter?.nationality || '—';
@@ -1559,7 +1578,9 @@
     window.openPerformanceModal = (pEncoded) => {
         const p = JSON.parse(decodeURIComponent(pEncoded));
         const workTitle = p.work?.title || 'Unknown Work';
-        const composerName = p.work?.composer?.name
+        const composerName = p.work?.composer_name
+            || (p.work?.composer_profile ? (p.work.composer_profile.name || `${p.work.composer_profile.first_name || ''} ${p.work.composer_profile.last_name || ''}`.trim()) : '')
+            || p.work?.composer?.name
             || (p.work?.submitter ? `${p.work.submitter.first_name || ''} ${p.work.submitter.last_name || ''}`.trim() : '')
             || 'Unknown Composer';
         const performerName = p.ensemble_name
@@ -1801,11 +1822,14 @@
                         program_notes, style_tags, language_librettist,
                         technical_difficulty, space_requirements, additional_info,
                         status, created_at,
+                        composer_name,
+                        composer_profile_id,
                         composer:composer_id(name, nationality, period),
+                        composer_profile:composer_profile_id(first_name, last_name, name),
                         submitter:submitted_by(first_name, last_name),
                         work_instruments(*, instrument_id(*))
                     `)
-                    .or(`composer_id.eq.${userId},submitted_by.eq.${userId}`)
+                    .or(`composer_profile_id.eq.${userId},submitted_by.eq.${userId}`)
                     .eq('status', 'validated')
                     .order('created_at', { ascending: false });
 
@@ -1846,7 +1870,10 @@
                             id,
                             title,
                             subtitle,
-                            composer:composer_id (name)
+                            composer_name,
+                            composer_profile_id,
+                            composer:composer_id (name),
+                            composer_profile:composer_profile_id(first_name, last_name, name)
                         )
                     `)
                     .eq('performer_id', userId)
@@ -1858,7 +1885,11 @@
                         <div class="space-y-3">
                             ${performances.map(p => {
                                 const workTitle = p.work ? p.work.title : 'Unknown Work';
-                                const composerName = p.work && p.work.composer ? p.work.composer.name : 'Unknown';
+                                const composerName = p.work ? (
+                                    p.work.composer_name
+                                    || (p.work.composer_profile ? (p.work.composer_profile.name || `${p.work.composer_profile.first_name || ''} ${p.work.composer_profile.last_name || ''}`.trim()) : '')
+                                    || (p.work.composer ? p.work.composer.name : '')
+                                ) : 'Unknown';
                                 const dateStr = p.performance_date ? p.performance_date.split('-').reverse().join('/') : '—';
                                 return `
                                     <div class="p-4 bg-white/2 border border-white/5 rounded-2xl">
@@ -3011,7 +3042,7 @@
                 // Fetch the updated work data
                 const { data: updatedWork } = await supabase
                     .from('works')
-                    .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
+                    .select('*, composer:composer_id(*), composer_profile:composer_profile_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
                     .eq('id', workId)
                     .single();
                 if (updatedWork) {

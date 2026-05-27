@@ -466,7 +466,10 @@ async function loadPieces() {
         .select(`
             id, title, subtitle, year, duration_minutes,
             scoring_category, technical_difficulty,
+            composer_name,
+            composer_profile_id,
             composer:composer_id(name),
+            composer_profile:composer_profile_id(first_name, last_name, name),
             submitter:submitted_by(first_name, last_name, performer_name, name)
         `)
         .order('title', { ascending: true });
@@ -496,7 +499,10 @@ function renderPieces(piecesToRender) {
     }
 
     container.innerHTML = piecesToRender.map(p => {
-        const composerName = p.composer?.name || 'Unknown Composer';
+        const composerName = p.composer_name
+            || (p.composer_profile ? (p.composer_profile.name || `${p.composer_profile.first_name || ''} ${p.composer_profile.last_name || ''}`.trim()) : '')
+            || p.composer?.name
+            || 'Unknown Composer';
         const submitterProfile = p.submitter;
         let submitterName = 'System / Admin';
         if (submitterProfile) {
