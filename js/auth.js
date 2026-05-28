@@ -13,7 +13,7 @@ async function checkAuth() {
     
     const isLoginPage = path.includes('login.html');
     const isProfilePage = path.includes('profile');
-    const isPublicPage = path.includes('index.html') || path === '/' || path.endsWith('web/');
+    const isPublicPage = path.includes('index.html') || path === '/';
     
     if (!session && !isLoginPage && !isPublicPage) {
         console.warn("⚠️ No session found, redirecting to login...");
