@@ -226,7 +226,7 @@ async function intentarRegistro() {
                 first_name: firstName,
                 last_name: lastName,
                 username: username,
-                dob: dob,
+                dob: dob || null,
                 residence_country: country,
                 initial_role: role
             }
