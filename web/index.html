@@ -2245,6 +2245,10 @@
     };
 
     window.sendMessage = async (recipientId, text) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes enviar mensajes privados.");
+            return;
+        }
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
@@ -2412,6 +2416,10 @@
     };
 
     window.handleCreatePostSubmit = async (e) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes crear nuevas publicaciones.");
+            return;
+        }
         e.preventDefault();
         const submitBtn = e.target.querySelector('button[type="submit"]');
         const originalBtnHTML = submitBtn ? submitBtn.innerHTML : 'Publish Post';
@@ -2986,6 +2994,10 @@
         }
     };
     window.handleWorkVote = async (workId, voteValue) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes votar obras.");
+            return;
+        }
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
             alert("Por favor, inicia sesión para votar en las obras.");
@@ -3059,6 +3071,10 @@
     };
 
     window.handleVote = async (postId, voteValue) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes votar publicaciones.");
+            return;
+        }
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
             alert("Please log in to vote on discussions.");
@@ -3140,6 +3156,10 @@
     };
 
     window.handleCommentVote = async (commentId, voteValue) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes votar comentarios.");
+            return;
+        }
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
             alert("Please log in to vote on comments.");
@@ -3283,6 +3303,10 @@
     };
 
     window.submitCommentReply = async (commentId) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes responder a comentarios.");
+            return;
+        }
         const input = document.getElementById(`reply-input-${commentId}`);
         if (!input) return;
         const text = input.value.trim();
@@ -3468,6 +3492,10 @@
     };
 
     window.handleCommentSubmit = async (e) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes publicar comentarios.");
+            return;
+        }
         e.preventDefault();
         const input = document.getElementById('comment-input');
         const text = input.value.trim();

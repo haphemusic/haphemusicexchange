@@ -259,6 +259,10 @@ window.selectWork = (id, title, composer) => {
 };
 
 window.submitInterpretation = async () => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes registrar o modificar interpretaciones.");
+        return;
+    }
     let workId = document.getElementById('selected-work-id').value;
     const searchInput = document.getElementById('search-work-input').value.trim();
 
@@ -369,6 +373,11 @@ window.toggleExcelImportPanel = () => {
 };
 
 window.processCSV = (event) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes importar interpretaciones.");
+        event.target.value = '';
+        return;
+    }
     const file = event.target.files[0];
     if (!file) return;
 
@@ -536,6 +545,10 @@ function showSection(sectionId) {
 
 window.showSection = showSection;
 window.openSubmissionModal = () => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes registrar interpretaciones.");
+        return;
+    }
     resetSubmissionForm();
     document.getElementById('submission-modal').classList.remove('hidden');
     document.getElementById('submission-modal').classList.add('flex');
@@ -545,6 +558,10 @@ window.closeSubmissionModal = () => {
     document.getElementById('submission-modal').classList.remove('flex');
 };
 window.openEditSubmission = async (id) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes editar interpretaciones.");
+        return;
+    }
     const { data: submission, error } = await supabase
         .from('performances')
         .select(`*, work:work_id (
@@ -604,6 +621,10 @@ window.openEditSubmission = async (id) => {
     document.getElementById('submission-modal').classList.add('flex');
 };
 window.deletePerformance = async (id) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes eliminar interpretaciones.");
+        return;
+    }
     if (!confirm("Are you sure you want to delete this interpretation?")) return;
 
     const { error } = await supabase
@@ -769,6 +790,11 @@ function parseDateBulk(raw) {
 }
 
 window.handleBulkUpload = async (event) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes realizar cargas masivas.");
+        event.target.value = '';
+        return;
+    }
     const file = event.target.files[0];
     if (!file) return;
 

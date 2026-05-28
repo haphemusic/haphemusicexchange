@@ -402,6 +402,10 @@ async function loadValidations() {
 }
 
 async function handleValidation(performanceId, newStatus) {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes validar o rechazar interpretaciones.");
+        return;
+    }
     const { error } = await supabase
         .from('performances')
         .update({ status: newStatus })
@@ -594,6 +598,10 @@ window.closeWorkDetail = () => {
 
 // ── Delete confirmation ───────────────────────────────────────────
 window.confirmDelete = (workId, title) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes eliminar composiciones.");
+        return;
+    }
     document.getElementById('confirm-delete-title').textContent = `"${title}"`;
     document.getElementById('confirm-delete-modal').classList.add('open');
     document.getElementById('confirm-delete-btn').onclick = () => window.deleteWork(workId);
@@ -715,6 +723,10 @@ function resetWorkForm() {
 }
 
 window.openWorkModal = () => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes registrar nuevas composiciones.");
+        return;
+    }
     resetWorkForm();
     currentWizStep = 0;
     updateWizUI();
@@ -731,6 +743,10 @@ window.openWorkModal = () => {
 };
 
 window.editWork = (wEncoded) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes editar composiciones.");
+        return;
+    }
     const w = JSON.parse(decodeURIComponent(wEncoded));
     
     // Reset form to base state
@@ -900,6 +916,10 @@ function updateWizUI() {
 }
 
 window.saveWork = async () => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes registrar o modificar obras.");
+        return;
+    }
     const title = document.getElementById('w-title').value.trim();
     const year  = parseInt(document.getElementById('w-year').value) || null;
     const premDate = document.getElementById('w-prem-date').value;
@@ -1060,6 +1080,11 @@ window.toggleExcelImportPanel = () => {
 };
 
 window.handleExcelUpload = async (event) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes importar obras.");
+        event.target.value = '';
+        return;
+    }
     const file = event.target.files[0];
     if (!file) return;
 

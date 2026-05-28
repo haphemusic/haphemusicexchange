@@ -27,7 +27,7 @@ async function checkAuth() {
         // Obtener el perfil con el rol y estado de completitud
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('role, is_complete')
+            .select('role, is_complete, status')
             .eq('id', session.user.id)
             .single();
 
@@ -52,6 +52,36 @@ async function checkAuth() {
         const role = profile.role ? profile.role.toLowerCase().trim() : 'user';
         const isComplete = profile.is_complete;
         console.log("👤 User role:", role, "| Complete:", isComplete);
+
+        // Verificar moderación de usuarios
+        const status = profile.status || 'active';
+        window.currentUserStatus = status;
+
+        if (status === 'banned') {
+            console.warn("⚠️ Banned user detected, logging out...");
+            alert("Tu cuenta ha sido baneada permanentemente por un administrador.");
+            await logout();
+            return;
+        }
+
+        if (status === 'suspended') {
+            // Inyectar banner de advertencia si no existe ya
+            if (!document.getElementById('suspended-banner')) {
+                const banner = document.createElement('div');
+                banner.id = 'suspended-banner';
+                banner.className = 'w-full bg-amber-500/20 border-b border-amber-500/30 text-amber-300 px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 z-50 sticky top-20';
+                banner.innerHTML = `
+                    <span class="material-symbols-outlined text-[16px]">warning</span>
+                    <span>Tu cuenta está temporalmente suspendida. Tienes acceso de solo lectura y no puedes realizar publicaciones ni modificaciones.</span>
+                `;
+                const nav = document.querySelector('nav');
+                if (nav) {
+                    nav.insertAdjacentElement('afterend', banner);
+                } else {
+                    document.body.insertBefore(banner, document.body.firstChild);
+                }
+            }
+        }
 
         // Actualizar el timestamp de última actividad de manera asíncrona (Online indicator)
         supabase.from('profiles')
@@ -92,9 +122,16 @@ async function intentarLogin() {
         
         const { data: profile } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, status')
             .eq('id', data.user.id)
             .single();
+        
+        if (profile?.status === 'banned') {
+            await supabase.auth.signOut();
+            errorDiv.textContent = "Tu cuenta ha sido baneada permanentemente por un administrador.";
+            errorDiv.classList.remove('hidden');
+            return;
+        }
         
         const role = profile?.role ? profile.role.toLowerCase().trim() : 'user';
         

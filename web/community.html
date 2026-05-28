@@ -408,6 +408,10 @@
     };
 
     window.handleCreatePostSubmit = async (e) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes crear nuevas publicaciones.");
+            return;
+        }
         e.preventDefault();
         const submitBtn = e.target.querySelector('button[type="submit"]');
         const originalBtnHTML = submitBtn ? submitBtn.innerHTML : 'Publish Post';
@@ -736,6 +740,10 @@
     };
 
     window.submitComment = async () => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes publicar comentarios.");
+            return;
+        }
         const input = document.getElementById('new-comment-input');
         const content = input?.value?.trim();
         if (!content || !window._currentPostId) return;
@@ -759,6 +767,10 @@
     };
 
     window.votePost = async (voteType) => {
+        if (window.currentUserStatus === 'suspended') {
+            alert("Tu cuenta está suspendida. No puedes votar publicaciones.");
+            return;
+        }
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { alert('Please log in to vote.'); return; }
         try {
