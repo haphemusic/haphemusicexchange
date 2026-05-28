@@ -6,8 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const SUPABASE_URL = 'https://xidiihjezddpbgiexbph.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_U73JrtadWLF2DsT3ZDjv6w_SnKggOJ-';
+const SUPABASE_URL = 'https://olmjsegaabvgsnhplumx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_yYmGRKmtifKvHNgZ86cmgQ_Eo--U___';
 
 // UUID del usuario que figura como "submitted_by" en las obras de catálogo
 // (el administrador que gestiona el catálogo)
