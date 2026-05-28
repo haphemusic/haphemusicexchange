@@ -20,7 +20,7 @@ En este trabajo detallo cómo se gestionan los backups y logs en Contemporánica
      *(⚠️ AQUÍ PON UNA FOTO DEL PANEL DE BACKUPS DE SUPABASE)*
   2. **Por comandos (CLI):** Hice un volcado manual desde mi terminal para guardar las tablas:
      ```bash
-     pg_dump -h db.xidiihjezddpbgiexbph.supabase.co -U postgres -d postgres -F c -b -v -f backup_contemporanica.dump
+     pg_dump -h db.olmjsegaabvgsnhplumx.supabase.co -U postgres -d postgres -F c -b -v -f backup_contemporanica.dump
      ```
      *(⚠️ AQUÍ PON FOTO DE LA TERMINAL AL EJECUTAR EL COMANDO)*
 
