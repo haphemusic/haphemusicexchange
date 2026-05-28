@@ -362,10 +362,10 @@ async function loadValidations() {
         .select(`
             *,
             performer:performer_id (first_name, last_name, role),
-            work:work_id!inner (title, submitted_by)
+            work:work_id!inner (title, submitted_by, composer_profile_id)
         `)
         .eq('status', 'pending')
-        .eq('work.submitted_by', currentUser.id);
+        .or(`composer_profile_id.eq.${currentUser.id},and(composer_profile_id.is.null,submitted_by.eq.${currentUser.id})`, { foreignTable: 'work' });
 
     if (error || !validations || validations.length === 0) {
         container.innerHTML = '<p class="text-sm text-slate-500 py-10 text-center">No pending validation requests.</p>';
@@ -402,6 +402,10 @@ async function loadValidations() {
 }
 
 async function handleValidation(performanceId, newStatus) {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes validar o rechazar interpretaciones.");
+        return;
+    }
     const { error } = await supabase
         .from('performances')
         .update({ status: newStatus })
@@ -423,6 +427,8 @@ async function loadMyWorks() {
         .from('works')
         .select(`
             *,
+            composer:composer_id(name),
+            composer_profile:composer_profile_id(first_name, last_name, name),
             work_instruments (
                 instrument_id (name, family, variant)
             )
@@ -477,7 +483,11 @@ window.showWorkDetail = (wEncoded) => {
     const w = JSON.parse(decodeURIComponent(wEncoded));
     const detail = document.getElementById('work-detail-modal');
 
-    const composerName = document.getElementById('user-name').textContent || 'Unknown Composer';
+    const composerName = w.composer_name
+        || (w.composer_profile ? (w.composer_profile.name || `${w.composer_profile.first_name || ''} ${w.composer_profile.last_name || ''}`.trim()) : '')
+        || w.composer?.name
+        || document.getElementById('user-name').textContent
+        || 'Unknown Composer';
     const instList = (w.work_instruments || []).map(wi => wi.instrument_id?.name).filter(Boolean);
     const instruments = instList.join(', ') || w.performer_combination || '—';
 
@@ -588,6 +598,10 @@ window.closeWorkDetail = () => {
 
 // ── Delete confirmation ───────────────────────────────────────────
 window.confirmDelete = (workId, title) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes eliminar composiciones.");
+        return;
+    }
     document.getElementById('confirm-delete-title').textContent = `"${title}"`;
     document.getElementById('confirm-delete-modal').classList.add('open');
     document.getElementById('confirm-delete-btn').onclick = () => window.deleteWork(workId);
@@ -659,6 +673,7 @@ function resetWorkForm() {
 
     document.getElementById('w-title').value = '';
     document.getElementById('w-subtitle').value = '';
+    document.getElementById('w-composer-name').value = '';
     document.getElementById('w-year').value = new Date().getFullYear();
     document.getElementById('w-duration').value = '';
     document.getElementById('w-catalogue').value = '';
@@ -708,6 +723,10 @@ function resetWorkForm() {
 }
 
 window.openWorkModal = () => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes registrar nuevas composiciones.");
+        return;
+    }
     resetWorkForm();
     currentWizStep = 0;
     updateWizUI();
@@ -724,6 +743,10 @@ window.openWorkModal = () => {
 };
 
 window.editWork = (wEncoded) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes editar composiciones.");
+        return;
+    }
     const w = JSON.parse(decodeURIComponent(wEncoded));
     
     // Reset form to base state
@@ -749,6 +772,7 @@ window.editWork = (wEncoded) => {
     // Populate general fields
     document.getElementById('w-title').value = w.title || '';
     document.getElementById('w-subtitle').value = w.subtitle || '';
+    document.getElementById('w-composer-name').value = w.composer_name || '';
     document.getElementById('w-year').value = w.year || '';
     document.getElementById('w-duration').value = w.duration_minutes || '';
     document.getElementById('w-catalogue').value = w.catalogue_number || '';
@@ -892,6 +916,10 @@ function updateWizUI() {
 }
 
 window.saveWork = async () => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes registrar o modificar obras.");
+        return;
+    }
     const title = document.getElementById('w-title').value.trim();
     const year  = parseInt(document.getElementById('w-year').value) || null;
     const premDate = document.getElementById('w-prem-date').value;
@@ -968,6 +996,7 @@ window.saveWork = async () => {
         language_librettist:   document.getElementById('w-language').value.trim()      || null,
         additional_info:       document.getElementById('w-additional').value.trim()    || null,
 
+        composer_name:         document.getElementById('w-composer-name').value.trim() || null,
         composer_id:   null,         // Only set for catalog works via composers table
         submitted_by:  currentUser.id,
         status:        document.getElementById('w-visible').checked ? 'pending' : 'validated',
@@ -1051,6 +1080,11 @@ window.toggleExcelImportPanel = () => {
 };
 
 window.handleExcelUpload = async (event) => {
+    if (window.currentUserStatus === 'suspended') {
+        alert("Tu cuenta está suspendida. No puedes importar obras.");
+        event.target.value = '';
+        return;
+    }
     const file = event.target.files[0];
     if (!file) return;
 
@@ -1110,6 +1144,10 @@ window.handleExcelUpload = async (event) => {
                 'ano': 'w-year',
                 'year': 'w-year',
                 'anio': 'w-year',
+                'compositor': 'w-composer-name',
+                'composer': 'w-composer-name',
+                'composer name': 'w-composer-name',
+                'nombre compositor': 'w-composer-name',
                 'duracion': 'w-duration',
                 'duration': 'w-duration',
                 'catalogo': 'w-catalogue',
@@ -1475,7 +1513,8 @@ window.handleBulkUpload = async (event) => {
                 premiere_city: ['ciudad de estreno', 'ciudad estreno', 'estreno ciudad', 'premiere city'],
                 premiere_performers: ['interpretes de estreno', 'interpretes del estreno', 'interpretes estreno', 'estreno interpretes', 'premiere performers', 'interpretes'],
                 commissioned_by: ['encargo', 'commission', 'encargos / ayudas', 'encargos'],
-                notes: ['notas', 'comentarios', 'notes', 'comments', 'notas adicionales']
+                notes: ['notas', 'comentarios', 'notes', 'comments', 'notas adicionales'],
+                composer_name: ['compositor', 'composer', 'composer name', 'nombre compositor']
             };
 
             const matchedHeadersInfo = {};
@@ -1494,6 +1533,7 @@ window.handleBulkUpload = async (event) => {
             parsedWorks = rowsToProcess.map((row, idx) => {
                 const rawTitle = row[columnMapping.title] || '';
                 const rawSubtitle = row[columnMapping.subtitle] || '';
+                const rawComposer = row[columnMapping.composer_name] || '';
                 const rawYear = row[columnMapping.year] || '';
                 const rawDuration = row[columnMapping.duration_minutes] || '';
                 const rawCategory = row[columnMapping.scoring_category] || '';
@@ -1507,6 +1547,7 @@ window.handleBulkUpload = async (event) => {
 
                 const title = cleanFieldBulk(rawTitle);
                 const subtitle = cleanFieldBulk(rawSubtitle);
+                const composer_name = cleanFieldBulk(rawComposer) || document.getElementById('user-name').textContent.trim();
                 const year = parseYearBulk(rawYear);
                 const duration = parseDurationBulk(rawDuration);
                 const rawCatClean = cleanFieldBulk(rawCategory);
@@ -1532,6 +1573,7 @@ window.handleBulkUpload = async (event) => {
                     premiere_performers: cleanFieldBulk(rawPremPerformers),
                     commissioned_by: cleanFieldBulk(rawCommission),
                     program_notes: cleanFieldBulk(rawNotes),
+                    composer_name,
                     instruments,
                     unmatched,
                     errors,
@@ -1704,6 +1746,7 @@ window.submitBulkImport = async () => {
             commissioned_by: w.commissioned_by,
             program_notes: w.program_notes,
             composer_id: null,
+            composer_name: w.composer_name,
             submitted_by: currentUser.id,
             status: 'validated'
         }));

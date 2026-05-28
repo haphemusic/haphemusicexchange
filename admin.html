@@ -9,8 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/admin.js"></script>
+    <script type="module" src="js/auth.js?v=2"></script>
+    <script type="module" src="js/admin.js?v=2"></script>
     
     <script id="tailwind-config">
       tailwind.config = {
@@ -156,7 +156,7 @@
                         <p class="text-sm text-slate-500">Monitor activity and manage access permissions.</p>
                     </div>
                     <div class="flex gap-2">
-                        <input type="text" placeholder="Filter by email..." class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-salmon">
+                        <input type="text" id="user-search-input" oninput="window.filterUsers(this.value)" placeholder="Filter by name or email..." class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-salmon">
                         <button class="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-bold uppercase hover:bg-white/10 transition-all">Search</button>
                     </div>
                 </div>
@@ -165,6 +165,7 @@
                         <thead class="bg-white/5">
                             <tr>
                                 <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">User Entity</th>
+                                <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Email</th>
                                 <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Role</th>
                                 <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Joined</th>
                                 <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Status</th>
@@ -235,6 +236,33 @@
         <div class="glass-panel w-full max-w-md rounded-3xl p-8 space-y-6">
             <h2 class="text-2xl font-bold text-white">New Instrument</h2>
             <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Family</label>
+                    <select id="new-inst-family-select" onchange="toggleNewFamilyInput(this.value)" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon">
+                        <option value="Strings">Strings</option>
+                        <option value="Woodwinds">Woodwinds</option>
+                        <option value="Brass">Brass</option>
+                        <option value="Percussion">Percussion</option>
+                        <option value="Keyboard">Keyboard</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="NEW">-- Create New Family --</option>
+                    </select>
+                    <input type="text" id="new-inst-family-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon mt-2 hidden" placeholder="Enter new family name...">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Category / Sub-family</label>
+                    <select id="new-inst-category-select" onchange="toggleNewCategoryInput(this.value)" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon">
+                        <option value="Bowed Strings">Bowed Strings</option>
+                        <option value="Plucked Strings">Plucked Strings</option>
+                        <option value="Single Reed">Single Reed</option>
+                        <option value="Double Reed">Double Reed</option>
+                        <option value="Pitched Percussion">Pitched Percussion</option>
+                        <option value="Unpitched Percussion">Unpitched Percussion</option>
+                        <option value="Vocal">Vocal</option>
+                        <option value="NEW">-- Create New Category --</option>
+                    </select>
+                    <input type="text" id="new-inst-category-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon mt-2 hidden" placeholder="Enter new category name...">
+                </div>
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Instrument Name</label>
                     <input type="text" id="new-inst-name" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon" placeholder="e.g. Violin, Synth, Tabla">

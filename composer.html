@@ -10,8 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/composer.js"></script>
+    <script type="module" src="js/auth.js?v=2"></script>
+    <script type="module" src="js/composer.js?v=2"></script>
     
     <script id="tailwind-config">
       tailwind.config = {
@@ -663,6 +663,10 @@
                     <div class="wiz-field">
                         <label class="wiz-label">Subtitle / Version</label>
                         <input class="wiz-input" id="w-subtitle" type="text" placeholder="e.g. Revised version, Op. 3b">
+                    </div>
+                    <div class="wiz-field">
+                        <label class="wiz-label">Composer Name</label>
+                        <input class="wiz-input" id="w-composer-name" type="text" placeholder="Composer's name (leave blank if it's yours)">
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                         <div class="wiz-field">

@@ -12,13 +12,21 @@ FOR UPDATE USING (
   auth.uid() = performer_id OR 
   EXISTS (
     SELECT 1 FROM works 
-    WHERE works.id = performances.work_id AND works.submitted_by = auth.uid()
+    WHERE works.id = performances.work_id 
+      AND (
+        works.composer_profile_id = auth.uid() OR
+        (works.composer_profile_id IS NULL AND works.submitted_by = auth.uid())
+      )
   )
 )
 WITH CHECK (
   auth.uid() = performer_id OR 
   EXISTS (
     SELECT 1 FROM works 
-    WHERE works.id = performances.work_id AND works.submitted_by = auth.uid()
+    WHERE works.id = performances.work_id 
+      AND (
+        works.composer_profile_id = auth.uid() OR
+        (works.composer_profile_id IS NULL AND works.submitted_by = auth.uid())
+      )
   )
 );
