@@ -288,29 +288,27 @@ window.toggleNewCategoryInput = (val) => {
 };
 
 window.saveInstrument = async () => {
-    const name = document.getElementById('new-inst-name').value;
-    const familySelect = document.getElementById('new-inst-family-select').value;
-    const familyNew = document.getElementById('new-inst-family-input').value;
-    
-    const categorySelect = document.getElementById('new-inst-category-select').value;
-    const categoryNew = document.getElementById('new-inst-category-input').value;
-    
-    const family = familySelect === 'NEW' ? familyNew : familySelect;
-    const category = categorySelect === 'NEW' ? categoryNew : categorySelect;
+    const name = document.getElementById('new-inst-name').value.trim();
 
-    if (!name || !family || !category) return alert("Instrument Name, Family and Category are required");
+    if (!name) {
+        alert('Please enter the instrument name.');
+        return;
+    }
 
-    const { error } = await supabase.from('instruments').insert({ 
-        name: category, 
-        family, 
-        variant: name 
+    const { error } = await supabase.from('instruments').insert({
+        name,
+        family: 'Custom'
     });
 
-    if (error) alert(error.message);
-    else {
-        closeInstrumentModal();
-        await loadInstruments();
+    if (error) {
+        alert(error.message);
+        return;
     }
+
+    closeInstrumentModal();
+    document.getElementById('new-inst-name').value = '';
+    await loadInstruments();
+    await loadStats();
 };
 
 function showSection(sectionId) {

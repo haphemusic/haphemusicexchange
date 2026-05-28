@@ -236,39 +236,13 @@
             <h2 class="text-2xl font-bold text-white">New Instrument</h2>
             <div class="space-y-4">
                 <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Family</label>
-                    <select id="new-inst-family-select" onchange="toggleNewFamilyInput(this.value)" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon">
-                        <option value="Strings">Strings</option>
-                        <option value="Woodwinds">Woodwinds</option>
-                        <option value="Brass">Brass</option>
-                        <option value="Percussion">Percussion</option>
-                        <option value="Keyboard">Keyboard</option>
-                        <option value="Electronics">Electronics</option>
-                        <option value="NEW">-- Create New Family --</option>
-                    </select>
-                    <input type="text" id="new-inst-family-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon mt-2 hidden" placeholder="Enter new family name...">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Category / Sub-family</label>
-                    <select id="new-inst-category-select" onchange="toggleNewCategoryInput(this.value)" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon">
-                        <option value="Bowed Strings">Bowed Strings</option>
-                        <option value="Plucked Strings">Plucked Strings</option>
-                        <option value="Single Reed">Single Reed</option>
-                        <option value="Double Reed">Double Reed</option>
-                        <option value="Pitched Percussion">Pitched Percussion</option>
-                        <option value="Unpitched Percussion">Unpitched Percussion</option>
-                        <option value="Vocal">Vocal</option>
-                        <option value="NEW">-- Create New Category --</option>
-                    </select>
-                    <input type="text" id="new-inst-category-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon mt-2 hidden" placeholder="Enter new category name...">
-                </div>
-                <div class="space-y-1">
                     <label class="text-[10px] font-bold text-slate-500 uppercase ml-1">Instrument Name</label>
-                    <input type="text" id="new-inst-name" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon" >
+                    <input type="text" id="new-inst-name" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-salmon" placeholder="e.g. Violin, Synth, Tabla">
                 </div>
+                <p class="text-[11px] text-slate-400">The instrument will be added to the catalog and will be available in the archive search immediately after saving.</p>
             </div>
             <div class="flex gap-4 pt-4">
-                <button onclick="saveInstrument()" class="flex-1 bg-salmon text-white py-3 rounded-xl font-bold hover:brightness-110 transition-all">Save to Database</button>
+                <button onclick="saveInstrument()" class="flex-1 bg-salmon text-white py-3 rounded-xl font-bold hover:brightness-110 transition-all">Add to Catalog</button>
                 <button onclick="closeInstrumentModal()" class="px-6 py-3 bg-white/5 text-white rounded-xl font-bold border border-white/10">Cancel</button>
             </div>
         </div>
