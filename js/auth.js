@@ -17,7 +17,7 @@ async function checkAuth() {
     
     if (!session && !isLoginPage && !isPublicPage) {
         console.warn("⚠️ No session found, redirecting to login...");
-        window.location.href = 'https://www.haphemusic.org/login.html';
+        window.location.href = 'login.html';
         return;
     }
 
@@ -239,7 +239,7 @@ async function intentarRegistro() {
         errorDiv.classList.remove('hidden');
     } else {
         alert("Account created! Check your email and then log in to complete your profile.");
-        window.location.href = 'https://www.haphemusic.org/login.html';
+        window.location.href = 'login.html';
     }
 }
 
@@ -251,7 +251,7 @@ window.logout = logout;
 // Redirección automática a index.html si acceden al dominio raíz
 document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname === '/' || window.location.pathname === '/web/' || window.location.pathname === '/web') {
-        window.location.replace('https://www.haphemusic.org/index.html');
+        window.location.replace('index.html');
     } else {
         checkAuth();
     }
