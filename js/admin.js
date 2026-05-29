@@ -335,32 +335,42 @@ function renderInstrumentBoard() {
         }
     });
 
-    container.innerHTML = families.map(family => {
+    container.innerHTML = families.map((family, colIdx) => {
         const list = grouped[family] || [];
         const safeFamilyId = `col-${family.replace(/\s+/g, '_')}`;
+        const isFirst = colIdx === 0;
+        const isLast = colIdx === families.length - 1;
         return `
             <div id="${safeFamilyId}"
                  class="flex-shrink-0 w-80 bg-slate-950/40 rounded-3xl border border-white/5 p-6 flex flex-col max-h-[70vh] transition-all duration-300"
-                 draggable="true"
                  data-family="${family}"
-                 ondragstart="window.handleColumnDragStart(event, '${family}')"
                  ondragover="window.handleDragOver(event)"
                  ondragenter="window.handleDragEnter(event)"
                  ondragleave="window.handleDragLeave(event)"
-                 ondrop="window.handleColumnDrop(event, '${family}')"
-                 style="border-left: 3px solid transparent; border-right: 3px solid transparent;">
+                 ondrop="window.handleColumnDrop(event, '${family}')">
 
                 <div class="flex justify-between items-center mb-4 select-none">
                     <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined cursor-grab active:cursor-grabbing text-slate-500 hover:text-white select-none shrink-0" 
-                              style="font-size: 18px;"
-                              onmousedown="window.columnDragInitiated = true">drag_indicator</span>
                         <span class="w-2.5 h-2.5 rounded-full bg-salmon"></span>
                         <h3 class="font-bold text-white uppercase tracking-wider text-xs">${family}</h3>
                     </div>
-                    <span class="bg-white/5 border border-white/10 text-[10px] text-slate-400 px-2.5 py-0.5 rounded-full font-bold">
-                        ${list.length}
-                    </span>
+                    <div class="flex items-center gap-1">
+                        <button onclick="window.moveColumn('${family}', -1)"
+                                title="Move left"
+                                class="w-6 h-6 rounded-lg flex items-center justify-center transition-all
+                                       ${isFirst ? 'opacity-20 cursor-not-allowed text-slate-600' : 'text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer'}">
+                            <span class="material-symbols-outlined" style="font-size:16px">chevron_left</span>
+                        </button>
+                        <button onclick="window.moveColumn('${family}', 1)"
+                                title="Move right"
+                                class="w-6 h-6 rounded-lg flex items-center justify-center transition-all
+                                       ${isLast ? 'opacity-20 cursor-not-allowed text-slate-600' : 'text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer'}">
+                            <span class="material-symbols-outlined" style="font-size:16px">chevron_right</span>
+                        </button>
+                        <span class="bg-white/5 border border-white/10 text-[10px] text-slate-400 px-2.5 py-0.5 rounded-full font-bold ml-1">
+                            ${list.length}
+                        </span>
+                    </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto space-y-3 pr-2" style="max-height: calc(70vh - 100px); min-height: 200px;">
@@ -652,31 +662,18 @@ window.deletePiece = async (pieceId) => {
 let draggedInstrumentId = null;
 let draggedInstrumentFamily = null;
 let draggedType = null; // 'card' | 'column'
-let draggedFamily = null;
-
-window.columnDragInitiated = false;
-window.addEventListener('mouseup', () => {
-    window.columnDragInitiated = false;
-});
-
-window.handleColumnDragStart = (event, family) => {
-    if (!window.columnDragInitiated) {
-        event.preventDefault();
-        return;
-    }
-    draggedType = 'column';
-    draggedFamily = family;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', family);
-    const el = event.currentTarget;
-    setTimeout(() => { el.style.opacity = '0.4'; }, 0);
-    
-    const dragEndHandler = () => {
-        el.style.opacity = '';
-        window.columnDragInitiated = false;
-        document.removeEventListener('dragend', dragEndHandler);
-    };
-    document.addEventListener('dragend', dragEndHandler);
+/** Move a family column left (-1) or right (+1) */
+window.moveColumn = (family, direction) => {
+    const families = window.currentFamilies;
+    const idx = families.indexOf(family);
+    if (idx === -1) return;
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= families.length) return;
+    // Swap
+    families.splice(idx, 1);
+    families.splice(newIdx, 0, family);
+    localStorage.setItem('haphe_admin_family_order', JSON.stringify(families));
+    renderInstrumentBoard();
 };
 
 window.handleDragStart = (event, instrumentId, family) => {
@@ -691,19 +688,10 @@ window.handleDragStart = (event, instrumentId, family) => {
     document.addEventListener('dragend', () => { el.style.opacity = ''; }, { once: true });
 };
 
-// ── Column-level events (highlight whole column when hovering) ──
+// ── Column-level drag events (for card-to-column drops) ──
 window.handleDragOver = (event) => {
     event.preventDefault();
-    if (draggedType === 'column') {
-        event.stopPropagation();
-        const col = event.currentTarget;
-        const rect = col.getBoundingClientRect();
-        const isLeft = event.clientX < rect.left + rect.width / 2;
-        col.style.borderLeft  = isLeft  ? '3px solid #E57373' : '3px solid transparent';
-        col.style.borderRight = !isLeft ? '3px solid #E57373' : '3px solid transparent';
-    } else {
-        event.dataTransfer.dropEffect = 'move';
-    }
+    event.dataTransfer.dropEffect = 'move';
 };
 
 window.handleDragEnter = (event) => {
@@ -716,13 +704,8 @@ window.handleDragEnter = (event) => {
 
 window.handleDragLeave = (event) => {
     const col = event.currentTarget;
-    if (draggedType === 'column') {
-        col.style.borderLeft  = '3px solid transparent';
-        col.style.borderRight = '3px solid transparent';
-    } else {
-        if (!col.contains(event.relatedTarget)) {
-            col.classList.remove('bg-salmon/5', 'border-salmon/30');
-        }
+    if (!col.contains(event.relatedTarget)) {
+        col.classList.remove('bg-salmon/5', 'border-salmon/30');
     }
 };
 
@@ -739,69 +722,40 @@ window.saveFamilyOrder = async (family) => {
     }
 };
 
-/** Drop on column (either card reorder or column move) */
+/** Drop on column: handle card-to-column drops */
 window.handleColumnDrop = async (event, targetFamily) => {
     event.preventDefault();
     const col = event.currentTarget;
-    col.style.borderLeft  = '3px solid transparent';
-    col.style.borderRight = '3px solid transparent';
     col.classList.remove('bg-salmon/5', 'border-salmon/30');
 
-    if (draggedType === 'column') {
-        event.stopPropagation();
-        if (draggedFamily === targetFamily) return;
-        
-        const rect = col.getBoundingClientRect();
-        const insertBefore = event.clientX < rect.left + rect.width / 2;
+    if (draggedType !== 'card') return;
+    if (event.target.closest('.instrument-card')) return;
 
-        const fromIdx = window.currentFamilies.indexOf(draggedFamily);
-        const toIdx = window.currentFamilies.indexOf(targetFamily);
-        
-        if (fromIdx === -1 || toIdx === -1) return;
+    const srcId = parseInt(draggedInstrumentId, 10);
+    const inst = allInstruments.find(i => i.id === srcId);
+    if (!inst) return;
 
-        // Remove from old position
-        window.currentFamilies.splice(fromIdx, 1);
-        
-        // Calculate new position
-        let newIdx = window.currentFamilies.indexOf(targetFamily);
-        if (!insertBefore) newIdx++;
-        
-        window.currentFamilies.splice(newIdx, 0, draggedFamily);
+    const oldFamily = inst.family;
+    if (oldFamily === targetFamily) return;
 
-        // Save order
-        localStorage.setItem('haphe_admin_family_order', JSON.stringify(window.currentFamilies));
+    if (familyOrder[oldFamily]) {
+        familyOrder[oldFamily] = familyOrder[oldFamily].filter(id => id !== srcId);
+    }
+    inst.family = targetFamily;
+    if (!familyOrder[targetFamily]) {
+        familyOrder[targetFamily] = allInstruments.filter(i => i.family === targetFamily).map(i => i.id);
+    } else {
+        familyOrder[targetFamily].push(srcId);
+    }
+    renderInstrumentBoard();
 
-        renderInstrumentBoard();
-    } else if (draggedType === 'card') {
-        if (event.target.closest('.instrument-card')) return;
-        event.stopPropagation();
-
-        const srcId = parseInt(draggedInstrumentId, 10);
-        const inst = allInstruments.find(i => i.id === srcId);
-        if (!inst) return;
-
-        const oldFamily = inst.family;
-        if (oldFamily === targetFamily) return;
-
-        if (familyOrder[oldFamily]) {
-            familyOrder[oldFamily] = familyOrder[oldFamily].filter(id => id !== srcId);
-        }
-        inst.family = targetFamily;
-        if (!familyOrder[targetFamily]) {
-            familyOrder[targetFamily] = allInstruments.filter(i => i.family === targetFamily).map(i => i.id);
-        } else {
-            familyOrder[targetFamily].push(srcId);
-        }
-        renderInstrumentBoard();
-
-        const { error } = await supabase.from('instruments').update({ family: targetFamily }).eq('id', srcId);
-        if (error) { 
-            alert('Error: ' + error.message); 
-            await loadInstruments(); 
-        } else {
-            await saveFamilyOrder(oldFamily);
-            await saveFamilyOrder(targetFamily);
-        }
+    const { error } = await supabase.from('instruments').update({ family: targetFamily }).eq('id', srcId);
+    if (error) { 
+        alert('Error: ' + error.message); 
+        await loadInstruments(); 
+    } else {
+        await saveFamilyOrder(oldFamily);
+        await saveFamilyOrder(targetFamily);
     }
 };
 
