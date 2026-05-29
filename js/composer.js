@@ -167,10 +167,11 @@ async function notifyAdminsOfUnmatchedInstruments(unmatchedNames, workTitles = [
     }
 }
 
-function renderWizInstrumentMenu() {
-    const list = document.getElementById('wiz-instrument-list');
-    if (!list) return;
-    let menuHtml = Object.keys(instrumentData).map(f => {
+function renderDefaultWizInstrumentMenuItems() {
+    const menuItemsContainer = document.getElementById('wiz-instrument-menu-items');
+    if (!menuItemsContainer) return;
+
+    let html = Object.keys(instrumentData).map(f => {
         const names = Object.keys(instrumentData[f]);
         return `
             <div class="cascade-item">${f}
@@ -206,14 +207,32 @@ function renderWizInstrumentMenu() {
     }).join('');
 
     // Append 'Others' option at the bottom
-    menuHtml += `
+    html += `
         <div style="border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0;"></div>
         <div class="cascade-item font-bold text-salmon" onclick="window.showWizOtherInstrumentInput(); event.stopPropagation();" style="color: #E57373;">
             <span>Others / Otro...</span>
             <span class="material-symbols-outlined text-[16px]">edit</span>
         </div>
     `;
-    list.innerHTML = menuHtml;
+
+    menuItemsContainer.innerHTML = html;
+}
+
+function renderWizInstrumentMenu() {
+    const list = document.getElementById('wiz-instrument-list');
+    if (!list) return;
+
+    list.innerHTML = `
+        <div style="padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <input type="text" id="wiz-instrument-search" placeholder="Type to search or add new instrument..." 
+                   style="width: 100%; background: #08121f; border: 1px solid rgba(229,115,115,0.3); border-radius: 8px; padding: 8px 12px; color: white; font-size: 13px; outline: none;" 
+                   oninput="window.filterWizInstrumentList(this.value)" onclick="event.stopPropagation()">
+        </div>
+        <div id="wiz-instrument-menu-items" style="max-height: 280px; overflow-y: auto;">
+        </div>
+    `;
+
+    renderDefaultWizInstrumentMenuItems();
 }
 
 window.toggleWizInstrumentList = () => {
@@ -221,9 +240,117 @@ window.toggleWizInstrumentList = () => {
     if (!m) return;
     const isOpen = m.style.display === 'block';
     m.style.display = isOpen ? 'none' : 'block';
+
+    const searchInput = document.getElementById('wiz-instrument-search');
+    if (searchInput) {
+        searchInput.value = '';
+        renderDefaultWizInstrumentMenuItems();
+        if (!isOpen) {
+            setTimeout(() => searchInput.focus(), 50);
+        }
+    }
+
     const btn = document.getElementById('wiz-instrument-btn');
     if (btn) {
         btn.style.borderColor = isOpen ? '' : 'rgba(229,115,115,0.7)';
+    }
+};
+
+window.filterWizInstrumentList = (query) => {
+    const menuItemsContainer = document.getElementById('wiz-instrument-menu-items');
+    if (!menuItemsContainer) return;
+
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+        renderDefaultWizInstrumentMenuItems();
+        return;
+    }
+
+    const normalize = str => str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    const normQuery = normalize(trimmedQuery);
+
+    const matches = allInstruments.filter(inst => {
+        const nameNorm = normalize(inst.name || '');
+        const variantNorm = normalize(inst.variant || '');
+        return nameNorm.includes(normQuery) || variantNorm.includes(normQuery);
+    });
+
+    let html = '';
+
+    if (matches.length > 0) {
+        html += matches.map(inst => {
+            const v = inst.variant;
+            const n = inst.name;
+            const displayName = v ? (v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`) : n;
+            return `
+                <div class="cascade-item" onclick='window.addWizInstrumentTag(${inst.id}, ${JSON.stringify(displayName)})'>
+                    ${displayName} <span style="font-size: 10px; color: rgba(212,228,250,0.4); margin-left: 6px;">(${inst.family})</span>
+                </div>
+            `;
+        }).join('');
+    } else {
+        html += `<div style="padding: 16px; text-align: center; color: rgba(212,228,250,0.4); font-size: 13px; font-style: italic;">No matching instruments found.</div>`;
+    }
+
+    // Always add "Add '{query}' as custom instrument..." option at the bottom if there is no exact match
+    const exactMatch = allInstruments.some(inst => 
+        normalize(inst.variant || inst.name) === normQuery || normalize(inst.name) === normQuery
+    );
+
+    if (!exactMatch) {
+        html += `
+            <div style="border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0;"></div>
+            <div class="cascade-item font-bold" onclick="window.addTypedCustomInstrument(${JSON.stringify(trimmedQuery)}); event.stopPropagation();" style="color: #E57373;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                    <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                    Add "${trimmedQuery}" as custom...
+                </span>
+            </div>
+        `;
+    }
+
+    menuItemsContainer.innerHTML = html;
+};
+
+window.addTypedCustomInstrument = async (val) => {
+    // Insert new custom instrument into database
+    const { data: newInst, error: insertError } = await supabase
+        .from('instruments')
+        .insert({ name: val, family: 'Custom' })
+        .select()
+        .single();
+
+    if (insertError) {
+        console.error('Error inserting custom instrument:', insertError);
+        alert('Error registering custom instrument: ' + insertError.message);
+        return;
+    }
+
+    if (newInst) {
+        // Add to our local collections
+        allInstruments.push(newInst);
+        instrumentIdMap.set(newInst.id, newInst);
+        
+        // Select it
+        window.addWizInstrumentTag(newInst.id, newInst.name);
+
+        // Notify admins of new instrument
+        const workTitle = document.getElementById('w-title')?.value.trim() || 'Unspecified Work';
+        await notifyAdminsOfUnmatchedInstruments([newInst.name], [workTitle]);
+
+        // Clear search and close dropdown
+        const searchInput = document.getElementById('wiz-instrument-search');
+        if (searchInput) searchInput.value = '';
+        
+        const m = document.getElementById('wiz-instrument-list');
+        if (m) m.style.display = 'none';
+        
+        const btn = document.getElementById('wiz-instrument-btn');
+        if (btn) btn.style.borderColor = '';
     }
 };
 
@@ -247,6 +374,10 @@ window.addWizInstrumentTag = (instId, displayName) => {
     if (m) m.style.display = 'none';
     const btn = document.getElementById('wiz-instrument-btn');
     if (btn) btn.style.borderColor = '';
+
+    // Clear search input
+    const searchInput = document.getElementById('wiz-instrument-search');
+    if (searchInput) searchInput.value = '';
 
     updateWizInstrumentButtonLabel();
 };
