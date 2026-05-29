@@ -34,7 +34,20 @@ async function loadProfile() {
     document.getElementById('profile-role-badge').textContent = profile.role || 'User';
     document.getElementById('profile-initials').textContent = (firstName[0] !== '-' ? firstName[0] : '?') + (lastName[0] !== '-' ? lastName[0] : '?');
 
-    // Cargar Avatar si existe
+    // Rellenar top bar widget (user info)
+    const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Composer';
+    const userNameEl = document.getElementById('user-name');
+    if (userNameEl) userNameEl.textContent = fullName;
+    const userAvatarEl = document.getElementById('user-avatar');
+    if (userAvatarEl) {
+        if (profile.avatar_url) {
+            userAvatarEl.src = profile.avatar_url;
+        } else {
+            userAvatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=E57373&color=fff`;
+        }
+    }
+
+    // Cargar Avatar si existe en el card
     if (profile.avatar_url) {
         const preview = document.getElementById('profile-avatar-preview');
         const initials = document.getElementById('profile-initials');
@@ -221,6 +234,11 @@ async function uploadAvatar(event) {
             preview.src = publicUrl;
             preview.classList.remove('hidden');
             initials.classList.add('hidden');
+        }
+        // También actualizar el avatar de la barra superior
+        const headerAvatar = document.getElementById('user-avatar');
+        if (headerAvatar) {
+            headerAvatar.src = publicUrl;
         }
         currentProfileData.avatar_url = publicUrl;
         calculateProgress(currentProfileData);

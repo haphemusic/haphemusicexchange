@@ -126,7 +126,18 @@
         <!-- Top Bar -->
         <header class="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-slate-950/20 backdrop-blur-md flex-shrink-0">
             <h2 class="text-lg font-bold text-white">Public Profile</h2>
-            <div id="auth-header"></div>
+            <div id="auth-header" class="flex items-center gap-4">
+                <button onclick="logout()" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-salmon/10 text-salmon hover:bg-salmon hover:text-white transition-all text-xs font-medium cursor-pointer" title="Logout">
+                    <span class="material-symbols-outlined text-[18px]">logout</span>
+                </button>
+                <div class="flex flex-col items-end">
+                    <p id="user-name" class="text-sm font-bold text-white">---</p>
+                    <p class="text-[10px] text-salmon uppercase font-bold tracking-widest">Composer</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-slate-800 border border-white/10 overflow-hidden">
+                    <img id="user-avatar" src="https://ui-avatars.com/api/?name=C&background=E57373&color=fff" alt="Profile" class="w-full h-full object-cover">
+                </div>
+            </div>
         </header>
 
     <div class="flex-1 overflow-y-auto">
