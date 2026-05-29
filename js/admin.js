@@ -653,14 +653,17 @@ window.deletePiece = async (pieceId) => {
         return;
     }
 
+    const idVal = isNaN(pieceId) ? pieceId : parseInt(pieceId, 10);
+
     const { data, error } = await supabase
         .from('works')
         .delete()
-        .eq('id', parseInt(pieceId, 10))
+        .eq('id', idVal)
         .select();
 
     if (error) {
         alert('Error deleting piece: ' + error.message);
+        console.error("Delete error details:", error);
     } else {
         if (!data || data.length === 0) {
             alert("⚠️ No se eliminó la obra de la base de datos (0 filas afectadas).\n\nEsto se debe a las políticas de seguridad RLS de Supabase.\n\nPor favor, copia y ejecuta las consultas del archivo 'diseno/crear_politicas_admin.sql' en tu SQL Editor de Supabase para otorgar permisos de eliminación a los administradores.");
@@ -735,7 +738,10 @@ window.deleteSelectedPieces = async () => {
     const checked = document.querySelectorAll('.piece-checkbox:checked');
     if (checked.length === 0) return;
 
-    const ids = [...checked].map(cb => parseInt(cb.dataset.id, 10));
+    const ids = [...checked].map(cb => {
+        const val = cb.dataset.id;
+        return isNaN(val) ? val : parseInt(val, 10);
+    });
     if (!confirm(`Are you sure you want to permanently delete ${ids.length} piece${ids.length > 1 ? 's' : ''}? This action cannot be undone.`)) return;
 
     const { data, error } = await supabase
@@ -746,6 +752,7 @@ window.deleteSelectedPieces = async () => {
 
     if (error) {
         alert('Error deleting pieces: ' + error.message);
+        console.error("Bulk delete error details:", error);
     } else {
         if (!data || data.length === 0) {
             alert("⚠️ No se eliminaron las obras de la base de datos (0 filas afectadas).\n\nEsto se debe a las políticas de seguridad RLS de Supabase.\n\nPor favor, copia y ejecuta las consultas del archivo 'diseno/crear_politicas_admin.sql' en tu SQL Editor de Supabase para otorgar permisos de eliminación a los administradores.");
