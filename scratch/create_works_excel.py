@@ -1,8 +1,49 @@
 import openpyxl
 
-# Load the template
-wb = openpyxl.load_workbook("datos/workexample.xlsx")
+# Create a brand new workbook instead of loading the human-friendly template.
+# This ensures SheetJS parses it with Row 1 as headers correctly.
+wb = openpyxl.Workbook()
 ws = wb.active
+ws.title = "Obras"
+
+# Headers exactly matching the column names expected by the parser
+headers = [
+    "Original Title",
+    "Sub-title / Version",
+    "Year of Composition",
+    "Duration",
+    "Catalogue Number",
+    "Scoring Category",
+    "Number of Performers",
+    "Detailed Instrumentation",
+    "Soloist Instrument",
+    "Unusual Objects / Preparations",
+    "Use of Electronics",
+    "Type of Electronics",
+    "Required Software / Tech",
+    "Premiere Date",
+    "Premiere Venue",
+    "Premiere City",
+    "Premiere Performers",
+    "Commissioning",
+    "Publisher",
+    "Score Status",
+    "Availability of Materials",
+    "Copyright Society",
+    "Score Sample (Link/PDF)",
+    "Audio/Video Link",
+    "Recording Type",
+    "Program Notes",
+    "Aesthetic / Style Tags",
+    "Language / Librettist",
+    "Technical Difficulty",
+    "Space Requirements",
+    "Info+"
+]
+
+# Write headers in Row 1
+for col_idx, h in enumerate(headers):
+    ws.cell(row=1, column=col_idx + 1, value=h)
 
 # Define the 5 works data rows (31 columns each)
 works = [
@@ -178,15 +219,12 @@ works = [
     ]
 ]
 
-# Write to the active sheet starting at row 4
-start_row = 4
+# Write data in Row 2 to 6
 for i, work_data in enumerate(works):
-    current_row = start_row + i
+    current_row = 2 + i
     for col_idx, val in enumerate(work_data):
         ws.cell(row=current_row, column=col_idx + 1, value=val)
 
-# Save the workbook to a new file: datos_obras_prueba.xlsx or update existing if needed
-# Let's save it to 'datos/obras_ejemplo.xlsx' as requested
 output_file = "datos/obras_ejemplo.xlsx"
 wb.save(output_file)
-print(f"Successfully generated {output_file} with {len(works)} works!")
+print(f"Successfully generated clean, flat {output_file} with {len(works)} works!")
