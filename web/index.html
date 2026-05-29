@@ -726,9 +726,9 @@
                 technical_difficulty, space_requirements, additional_info,
                 status, created_at,
                 composer:composer_id(name, nationality, period),
-                submitter:submitted_by(first_name, last_name)
+                submitter:submitted_by(first_name, last_name, performer_name, name)
             `)
-            .eq('status', 'validated');
+            .in('status', ['validated', 'pending']);
 
         if (error) {
             console.error('Failed to load works:', error);
@@ -912,7 +912,7 @@
                 supabase
                     .from('works')
                     .select('*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))')
-                    .eq('status', 'validated')
+                    .in('status', ['validated', 'pending'])
                     .then(({ data, error }) => {
                         if (error) console.error("Error fetching works:", error);
                         else if (data) works = data;
@@ -924,7 +924,7 @@
                 supabase
                     .from('performances')
                     .select('*, work:work_id(*, composer:composer_id(*), submitter:submitted_by(*), work_instruments(*, instrument_id(*))), performer:performer_id(*)')
-                    .eq('status', 'validated')
+                    .in('status', ['validated', 'pending'])
                     .then(({ data, error }) => {
                         if (error) console.error("Error fetching performances:", error);
                         else if (data) performances = data;
@@ -1020,7 +1020,7 @@
                 const title = w.title?.toLowerCase() || '';
                 const subtitle = w.subtitle?.toLowerCase() || '';
                 const composerName = w.composer?.name?.toLowerCase() || '';
-                const submitterName = `${w.submitter?.first_name || ''} ${w.submitter?.last_name || ''}`.trim().toLowerCase();
+                const submitterName = `${w.submitter?.first_name || ''} ${w.submitter?.last_name || ''} ${w.submitter?.performer_name || ''} ${w.submitter?.name || ''}`.trim().toLowerCase();
                 const performerCombination = w.performer_combination?.toLowerCase() || '';
                 const instrumentText = (w.work_instruments || [])
                     .map(wi => [wi.instrument_id?.name, wi.instrument_id?.variant, wi.instrument_id?.family]
@@ -1100,8 +1100,8 @@
                 const title = p.work?.title?.toLowerCase() || '';
                 const subtitle = p.work?.subtitle?.toLowerCase() || '';
                 const composerName = p.work?.composer?.name?.toLowerCase() || '';
-                const submitterName = `${p.work?.submitter?.first_name || ''} ${p.work?.submitter?.last_name || ''}`.trim().toLowerCase();
-                const performerName = p.performer?.performer_name?.toLowerCase() || `${p.performer?.first_name || ''} ${p.performer?.last_name || ''}`.trim().toLowerCase();
+                const submitterName = `${p.work?.submitter?.first_name || ''} ${p.work?.submitter?.last_name || ''} ${p.work?.submitter?.performer_name || ''} ${p.work?.submitter?.name || ''}`.trim().toLowerCase();
+                const performerName = p.performer?.performer_name?.toLowerCase() || p.performer?.name?.toLowerCase() || `${p.performer?.first_name || ''} ${p.performer?.last_name || ''}`.trim().toLowerCase();
                 const ensembleName = p.ensemble_name?.toLowerCase() || '';
                 const eventName = p.event_name?.toLowerCase() || '';
                 const venue = p.venue?.toLowerCase() || '';
@@ -1320,6 +1320,7 @@
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
                         <div style="display:flex;flex-wrap:wrap;gap:6px">
                             <span class="work-badge" style="background:rgba(229,115,115,0.12);color:#E57373;border:1px solid rgba(229,115,115,0.2)">Work</span>
+                            ${w.status === 'pending' ? `<span class="work-badge" style="background:rgba(245,158,11,0.12);color:#F59E0B;border:1px solid rgba(245,158,11,0.3)"><span class="material-symbols-outlined" style="font-size:11px;margin-right:2px;vertical-align:middle">pending</span>Pending</span>` : ''}
                             ${scoringBadge(w.scoring_category)}
                             ${elec}
                         </div>
@@ -1376,6 +1377,7 @@
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
                         <div style="display:flex;flex-wrap:wrap;gap:6px">
                             <span class="work-badge" style="background:rgba(99,179,237,0.12);color:#63b3ed;border:1px solid rgba(99,179,237,0.2)">Interpretation</span>
+                            ${p.status === 'pending' ? `<span class="work-badge" style="background:rgba(245,158,11,0.12);color:#F59E0B;border:1px solid rgba(245,158,11,0.3)"><span class="material-symbols-outlined" style="font-size:11px;margin-right:2px;vertical-align:middle">pending</span>Pending</span>` : ''}
                             ${hasMedia}
                         </div>
                     </div>
@@ -1802,11 +1804,11 @@
                         technical_difficulty, space_requirements, additional_info,
                         status, created_at,
                         composer:composer_id(name, nationality, period),
-                        submitter:submitted_by(first_name, last_name),
+                        submitter:submitted_by(first_name, last_name, performer_name, name),
                         work_instruments(*, instrument_id(*))
                     `)
                     .or(`composer_id.eq.${userId},submitted_by.eq.${userId}`)
-                    .eq('status', 'validated')
+                    .in('status', ['validated', 'pending'])
                     .order('created_at', { ascending: false });
 
                 if (works && works.length > 0) {
@@ -1850,7 +1852,7 @@
                         )
                     `)
                     .eq('performer_id', userId)
-                    .eq('status', 'validated')
+                    .in('status', ['validated', 'pending'])
                     .order('performance_date', { ascending: false });
 
                 if (performances && performances.length > 0) {
