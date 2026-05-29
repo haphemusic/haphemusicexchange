@@ -291,3 +291,13 @@ This document details the user search, direct messaging, navigation/About sectio
 - **Edit Work Synchronization**: Updated `editWork` to parse the `performer_combination` text field when editing a work. Any instruments in this list that are not present in `work_instruments` are reconstructed:
   - If the admin has since approved/added the instrument to the catalog, it automatically loads with its official database ID.
   - If the instrument is still pending approval, it is reloaded as a temporary pending custom tag (with the ⏳ icon).
+
+---
+
+## 8. Horizontal Column (Family) Drag and Drop in Admin Dashboard
+
+#### [MODIFY] [admin.js](file:///c:/Users/gutis/Desktop/proyecto/js/admin.js)
+- **Interactive Drag Handle**: Added a dedicated `drag_indicator` handle to each column header, enabling column-level drag actions on mouse down (`enableColumnDrag`) and resetting to card-only dragging on mouse up/drag end (`disableColumnDrag`).
+- **Unified Drag & Drop Events**: Upgraded `handleDragOver`, `handleDragLeave`, and `handleColumnDrop` to seamlessly process both `card` (vertical reordering and family movement) and `column` (horizontal swapping of entire instrument families) drag payloads.
+- **Persistence of Family Order**: Stored and retrieved the horizontal family layout in `localStorage` (`haphe_admin_family_order`).
+- **Dynamic Board Sorting**: Modified `renderInstrumentBoard` to load and arrange the columns according to the persisted family order, appending any new/unranked families to the end.

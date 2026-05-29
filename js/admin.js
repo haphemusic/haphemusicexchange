@@ -288,10 +288,35 @@ function renderInstrumentBoard() {
     const container = document.getElementById('instrument-board');
     if (!container) return;
 
-    // Group instruments by family, respecting familyOrder
-    const grouped = {};
-    const families = [...new Set(allInstruments.map(i => i.family))].sort();
+    // Get all unique families present in the DB
+    const dbFamilies = [...new Set(allInstruments.map(i => i.family))].filter(Boolean);
 
+    // Try to load saved order from localStorage
+    let storedOrder = [];
+    try {
+        const stored = localStorage.getItem('haphe_admin_family_order');
+        if (stored) storedOrder = JSON.parse(stored);
+    } catch (e) {
+        console.error("Error loading family order", e);
+    }
+
+    // Sort families: storedOrder first, then any new ones
+    const families = [];
+    storedOrder.forEach(f => {
+        if (dbFamilies.includes(f)) {
+            families.push(f);
+        }
+    });
+    dbFamilies.forEach(f => {
+        if (!families.includes(f)) {
+            families.push(f);
+        }
+    });
+
+    window.currentFamilies = families;
+
+    // Group instruments by family
+    const grouped = {};
     families.forEach(f => { grouped[f] = []; });
     allInstruments.forEach(i => {
         if (grouped[i.family]) grouped[i.family].push(i);
@@ -312,16 +337,25 @@ function renderInstrumentBoard() {
 
     container.innerHTML = families.map(family => {
         const list = grouped[family] || [];
+        const safeFamilyId = `col-${family.replace(/\s+/g, '_')}`;
         return `
-            <div class="flex-shrink-0 w-80 bg-slate-950/40 rounded-3xl border border-white/5 p-6 flex flex-col max-h-[70vh] transition-all duration-300"
+            <div id="${safeFamilyId}"
+                 class="flex-shrink-0 w-80 bg-slate-950/40 rounded-3xl border border-white/5 p-6 flex flex-col max-h-[70vh] transition-all duration-300"
+                 draggable="false"
                  data-family="${family}"
+                 ondragstart="window.handleColumnDragStart(event, '${family}')"
                  ondragover="window.handleDragOver(event)"
                  ondragenter="window.handleDragEnter(event)"
                  ondragleave="window.handleDragLeave(event)"
-                 ondrop="window.handleColumnDrop(event, '${family}')">
+                 ondrop="window.handleColumnDrop(event, '${family}')"
+                 style="border-left: 3px solid transparent; border-right: 3px solid transparent;">
 
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-4 select-none">
                     <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined cursor-grab active:cursor-grabbing text-slate-500 hover:text-white select-none shrink-0" 
+                              style="font-size: 18px;"
+                              onmousedown="window.enableColumnDrag('${family}')" 
+                              onmouseup="window.disableColumnDrag('${family}')">drag_indicator</span>
                         <span class="w-2.5 h-2.5 rounded-full bg-salmon"></span>
                         <h3 class="font-bold text-white uppercase tracking-wider text-xs">${family}</h3>
                     </div>
@@ -618,8 +652,39 @@ window.deletePiece = async (pieceId) => {
 
 let draggedInstrumentId = null;
 let draggedInstrumentFamily = null;
+let draggedType = null; // 'card' | 'column'
+let draggedFamily = null;
+
+window.enableColumnDrag = (family) => {
+    const id = `col-${family.replace(/\s+/g, '_')}`;
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('draggable', 'true');
+};
+
+window.disableColumnDrag = (family) => {
+    const id = `col-${family.replace(/\s+/g, '_')}`;
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('draggable', 'false');
+};
+
+window.handleColumnDragStart = (event, family) => {
+    draggedType = 'column';
+    draggedFamily = family;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', family);
+    const el = event.currentTarget;
+    setTimeout(() => { el.style.opacity = '0.4'; }, 0);
+    
+    const dragEndHandler = () => {
+        el.style.opacity = '';
+        el.setAttribute('draggable', 'false');
+        document.removeEventListener('dragend', dragEndHandler);
+    };
+    document.addEventListener('dragend', dragEndHandler);
+};
 
 window.handleDragStart = (event, instrumentId, family) => {
+    draggedType = 'card';
     draggedInstrumentId = String(instrumentId);
     draggedInstrumentFamily = family;
     event.dataTransfer.effectAllowed = 'move';
@@ -632,18 +697,35 @@ window.handleDragStart = (event, instrumentId, family) => {
 // ── Column-level events (highlight whole column when hovering) ──
 window.handleDragOver = (event) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+    if (draggedType === 'column') {
+        event.stopPropagation();
+        const col = event.currentTarget;
+        const rect = col.getBoundingClientRect();
+        const isLeft = event.clientX < rect.left + rect.width / 2;
+        col.style.borderLeft  = isLeft  ? '3px solid #E57373' : '3px solid transparent';
+        col.style.borderRight = !isLeft ? '3px solid #E57373' : '3px solid transparent';
+    } else {
+        event.dataTransfer.dropEffect = 'move';
+    }
 };
 
 window.handleDragEnter = (event) => {
-    if (!event.target.closest('.instrument-card')) {
-        event.currentTarget.classList.add('bg-salmon/5', 'border-salmon/30');
+    if (draggedType === 'card') {
+        if (!event.target.closest('.instrument-card')) {
+            event.currentTarget.classList.add('bg-salmon/5', 'border-salmon/30');
+        }
     }
 };
 
 window.handleDragLeave = (event) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) {
-        event.currentTarget.classList.remove('bg-salmon/5', 'border-salmon/30');
+    const col = event.currentTarget;
+    if (draggedType === 'column') {
+        col.style.borderLeft  = '3px solid transparent';
+        col.style.borderRight = '3px solid transparent';
+    } else {
+        if (!col.contains(event.relatedTarget)) {
+            col.classList.remove('bg-salmon/5', 'border-salmon/30');
+        }
     }
 };
 
@@ -660,43 +742,75 @@ window.saveFamilyOrder = async (family) => {
     }
 };
 
-/** Drop on column background (empty space) — move to end of that family */
+/** Drop on column (either card reorder or column move) */
 window.handleColumnDrop = async (event, targetFamily) => {
-    if (event.target.closest('.instrument-card')) return;
     event.preventDefault();
     const col = event.currentTarget;
+    col.style.borderLeft  = '3px solid transparent';
+    col.style.borderRight = '3px solid transparent';
     col.classList.remove('bg-salmon/5', 'border-salmon/30');
 
-    const srcId = parseInt(draggedInstrumentId, 10);
-    const inst = allInstruments.find(i => i.id === srcId);
-    if (!inst) return;
+    if (draggedType === 'column') {
+        event.stopPropagation();
+        if (draggedFamily === targetFamily) return;
+        
+        const rect = col.getBoundingClientRect();
+        const insertBefore = event.clientX < rect.left + rect.width / 2;
 
-    const oldFamily = inst.family;
-    if (oldFamily === targetFamily) return;
+        const fromIdx = window.currentFamilies.indexOf(draggedFamily);
+        const toIdx = window.currentFamilies.indexOf(targetFamily);
+        
+        if (fromIdx === -1 || toIdx === -1) return;
 
-    if (familyOrder[oldFamily]) {
-        familyOrder[oldFamily] = familyOrder[oldFamily].filter(id => id !== srcId);
-    }
-    inst.family = targetFamily;
-    if (!familyOrder[targetFamily]) {
-        familyOrder[targetFamily] = allInstruments.filter(i => i.family === targetFamily).map(i => i.id);
-    } else {
-        familyOrder[targetFamily].push(srcId);
-    }
-    renderInstrumentBoard();
+        // Remove from old position
+        window.currentFamilies.splice(fromIdx, 1);
+        
+        // Calculate new position
+        let newIdx = window.currentFamilies.indexOf(targetFamily);
+        if (!insertBefore) newIdx++;
+        
+        window.currentFamilies.splice(newIdx, 0, draggedFamily);
 
-    const { error } = await supabase.from('instruments').update({ family: targetFamily }).eq('id', srcId);
-    if (error) { 
-        alert('Error: ' + error.message); 
-        await loadInstruments(); 
-    } else {
-        await saveFamilyOrder(oldFamily);
-        await saveFamilyOrder(targetFamily);
+        // Save order
+        localStorage.setItem('haphe_admin_family_order', JSON.stringify(window.currentFamilies));
+
+        renderInstrumentBoard();
+    } else if (draggedType === 'card') {
+        if (event.target.closest('.instrument-card')) return;
+        event.stopPropagation();
+
+        const srcId = parseInt(draggedInstrumentId, 10);
+        const inst = allInstruments.find(i => i.id === srcId);
+        if (!inst) return;
+
+        const oldFamily = inst.family;
+        if (oldFamily === targetFamily) return;
+
+        if (familyOrder[oldFamily]) {
+            familyOrder[oldFamily] = familyOrder[oldFamily].filter(id => id !== srcId);
+        }
+        inst.family = targetFamily;
+        if (!familyOrder[targetFamily]) {
+            familyOrder[targetFamily] = allInstruments.filter(i => i.family === targetFamily).map(i => i.id);
+        } else {
+            familyOrder[targetFamily].push(srcId);
+        }
+        renderInstrumentBoard();
+
+        const { error } = await supabase.from('instruments').update({ family: targetFamily }).eq('id', srcId);
+        if (error) { 
+            alert('Error: ' + error.message); 
+            await loadInstruments(); 
+        } else {
+            await saveFamilyOrder(oldFamily);
+            await saveFamilyOrder(targetFamily);
+        }
     }
 };
 
 // ── Card-level drag events (within-column vertical reordering) ──
 window.handleCardDragOver = (event) => {
+    if (draggedType !== 'card') return;
     event.preventDefault();
     event.stopPropagation();
     const card = event.currentTarget;
@@ -712,6 +826,7 @@ window.handleCardDragLeave = (event) => {
 };
 
 window.handleCardDrop = async (event, targetId, targetFamily) => {
+    if (draggedType !== 'card') return;
     event.preventDefault();
     event.stopPropagation();
     const card = event.currentTarget;
