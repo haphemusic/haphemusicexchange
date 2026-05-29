@@ -341,7 +341,7 @@ function renderInstrumentBoard() {
         return `
             <div id="${safeFamilyId}"
                  class="flex-shrink-0 w-80 bg-slate-950/40 rounded-3xl border border-white/5 p-6 flex flex-col max-h-[70vh] transition-all duration-300"
-                 draggable="false"
+                 draggable="true"
                  data-family="${family}"
                  ondragstart="window.handleColumnDragStart(event, '${family}')"
                  ondragover="window.handleDragOver(event)"
@@ -354,8 +354,7 @@ function renderInstrumentBoard() {
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-outlined cursor-grab active:cursor-grabbing text-slate-500 hover:text-white select-none shrink-0" 
                               style="font-size: 18px;"
-                              onmousedown="window.enableColumnDrag('${family}')" 
-                              onmouseup="window.disableColumnDrag('${family}')">drag_indicator</span>
+                              onmousedown="window.columnDragInitiated = true">drag_indicator</span>
                         <span class="w-2.5 h-2.5 rounded-full bg-salmon"></span>
                         <h3 class="font-bold text-white uppercase tracking-wider text-xs">${family}</h3>
                     </div>
@@ -655,19 +654,16 @@ let draggedInstrumentFamily = null;
 let draggedType = null; // 'card' | 'column'
 let draggedFamily = null;
 
-window.enableColumnDrag = (family) => {
-    const id = `col-${family.replace(/\s+/g, '_')}`;
-    const el = document.getElementById(id);
-    if (el) el.setAttribute('draggable', 'true');
-};
-
-window.disableColumnDrag = (family) => {
-    const id = `col-${family.replace(/\s+/g, '_')}`;
-    const el = document.getElementById(id);
-    if (el) el.setAttribute('draggable', 'false');
-};
+window.columnDragInitiated = false;
+window.addEventListener('mouseup', () => {
+    window.columnDragInitiated = false;
+});
 
 window.handleColumnDragStart = (event, family) => {
+    if (!window.columnDragInitiated) {
+        event.preventDefault();
+        return;
+    }
     draggedType = 'column';
     draggedFamily = family;
     event.dataTransfer.effectAllowed = 'move';
@@ -677,13 +673,14 @@ window.handleColumnDragStart = (event, family) => {
     
     const dragEndHandler = () => {
         el.style.opacity = '';
-        el.setAttribute('draggable', 'false');
+        window.columnDragInitiated = false;
         document.removeEventListener('dragend', dragEndHandler);
     };
     document.addEventListener('dragend', dragEndHandler);
 };
 
 window.handleDragStart = (event, instrumentId, family) => {
+    event.stopPropagation(); // Prevent column drag start from being triggered
     draggedType = 'card';
     draggedInstrumentId = String(instrumentId);
     draggedInstrumentFamily = family;
