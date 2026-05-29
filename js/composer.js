@@ -170,7 +170,7 @@ async function notifyAdminsOfUnmatchedInstruments(unmatchedNames, workTitles = [
 function renderWizInstrumentMenu() {
     const list = document.getElementById('wiz-instrument-list');
     if (!list) return;
-    list.innerHTML = Object.keys(instrumentData).map(f => {
+    let menuHtml = Object.keys(instrumentData).map(f => {
         const names = Object.keys(instrumentData[f]);
         return `
             <div class="cascade-item">${f}
@@ -204,6 +204,16 @@ function renderWizInstrumentMenu() {
             </div>
         `;
     }).join('');
+
+    // Append 'Others' option at the bottom
+    menuHtml += `
+        <div style="border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0;"></div>
+        <div class="cascade-item font-bold text-salmon" onclick="window.showWizOtherInstrumentInput(); event.stopPropagation();" style="color: #E57373;">
+            <span>Others / Otro...</span>
+            <span class="material-symbols-outlined text-[16px]">edit</span>
+        </div>
+    `;
+    list.innerHTML = menuHtml;
 }
 
 window.toggleWizInstrumentList = () => {
@@ -249,6 +259,89 @@ window.removeWizInstrumentTag = (instId) => {
         if (tagEl) tagEl.remove();
     }
     updateWizInstrumentButtonLabel();
+};
+
+window.showWizOtherInstrumentInput = () => {
+    // Hide dropdown menu
+    const m = document.getElementById('wiz-instrument-list');
+    if (m) m.style.display = 'none';
+    const btn = document.getElementById('wiz-instrument-btn');
+    if (btn) btn.style.borderColor = '';
+
+    // Show custom input container
+    const container = document.getElementById('wiz-other-instrument-container');
+    if (container) {
+        container.classList.remove('hidden');
+        const input = document.getElementById('wiz-other-instrument-input');
+        if (input) {
+            input.focus();
+            if (!input.dataset.listenerAdded) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        window.addWizOtherInstrumentTag();
+                    }
+                });
+                input.dataset.listenerAdded = 'true';
+            }
+        }
+    }
+};
+
+window.addWizOtherInstrumentTag = async () => {
+    const input = document.getElementById('wiz-other-instrument-input');
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) {
+        alert('Please enter an instrument name. / Por favor introduce el nombre del instrumento.');
+        return;
+    }
+
+    // Check if it already exists case-insensitively in our loaded list
+    const cleanVal = val.toLowerCase();
+    const existing = allInstruments.find(inst => 
+        inst.name.toLowerCase() === cleanVal || 
+        (inst.variant && inst.variant.toLowerCase() === cleanVal)
+    );
+
+    if (existing) {
+        // If it already exists, just add it as a normal tag
+        window.addWizInstrumentTag(existing.id, existing.variant || existing.name);
+        input.value = '';
+        document.getElementById('wiz-other-instrument-container').classList.add('hidden');
+        return;
+    }
+
+    // Insert new custom instrument into database
+    const { data: newInst, error: insertError } = await supabase
+        .from('instruments')
+        .insert({ name: val, family: 'Custom' })
+        .select()
+        .single();
+
+    if (insertError) {
+        console.error('Error inserting custom instrument:', insertError);
+        alert('Error registering custom instrument: ' + insertError.message);
+        return;
+    }
+
+    if (newInst) {
+        // Add to our local collections
+        allInstruments.push(newInst);
+        instrumentIdMap.set(newInst.id, newInst);
+        
+        // Select it
+        window.addWizInstrumentTag(newInst.id, newInst.name);
+
+        // Notify admins of new instrument
+        // Get the title of the work being registered if it has one
+        const workTitle = document.getElementById('w-title')?.value.trim() || 'Unspecified Work';
+        await notifyAdminsOfUnmatchedInstruments([newInst.name], [workTitle]);
+
+        // Reset input and hide container
+        input.value = '';
+        document.getElementById('wiz-other-instrument-container').classList.add('hidden');
+    }
 };
 
 function updateWizInstrumentButtonLabel() {
@@ -768,6 +861,12 @@ function resetWorkForm() {
     const tagsContainer = document.getElementById('wiz-tags-container');
     if (tagsContainer) tagsContainer.innerHTML = '';
     updateWizInstrumentButtonLabel();
+
+    // Reset custom instrument inputs
+    const otherInput = document.getElementById('wiz-other-instrument-input');
+    if (otherInput) otherInput.value = '';
+    const otherContainer = document.getElementById('wiz-other-instrument-container');
+    if (otherContainer) otherContainer.classList.add('hidden');
 
     // Show Excel trigger
     const excelWrapper = document.getElementById('excel-import-trigger-wrapper');
