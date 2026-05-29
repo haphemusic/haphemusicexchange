@@ -51,22 +51,64 @@
             border-left-color: #E57373;
             background: rgba(255, 255, 255, 0.02);
         }
+        .sidebar-item-active {
+            background: rgba(229, 115, 115, 0.1);
+            color: #E57373;
+            border-left: 4px solid #E57373;
+        }
     </style>
 </head>
-<body class="bg-surface-container-lowest text-on-surface font-sans selection:bg-salmon selection:text-white">
+<body class="bg-surface-container-lowest text-on-surface font-sans flex h-screen overflow-hidden">
 
-<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 h-20 bg-slate-950/80 backdrop-blur-xl border-b border-white/10">
-    <a href="index.html" class="text-2xl font-bold tracking-tighter text-white hover:text-salmon transition-all duration-300">HAPHEMUSIC</a>
-    <div class="flex items-center gap-3">
-        <a href="musician.html" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all duration-200 text-sm font-bold">
-            <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
-            Back
-        </a>
-        <div id="auth-header"></div>
-    </div>
-</nav>
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-950/50 border-r border-white/10 flex flex-col z-20 flex-shrink-0">
+        <div class="p-8">
+            <a href="index.html" class="text-2xl font-bold tracking-tighter text-white hover:text-salmon transition-colors block mb-2">HAPHEMUSIC</a>
+            <h1 class="text-sm font-bold text-slate-400 tracking-tighter flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-salmon w-5 h-5 overflow-hidden inline-flex items-center justify-center" style="min-width: 20px; font-size: 16px;">album</span>
+                Performer Studio
+            </h1>
+            <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">Performer Hub</p>
+        </div>
 
-<main class="max-w-4xl mx-auto pt-32 pb-20 px-6">
+        <nav class="flex-1 px-4 space-y-2">
+            <a href="musician.html#overview" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                <span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+            <a href="musician.html#submissions" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                <span class="material-symbols-outlined">send</span>
+                My Submissions
+            </a>
+            <a href="musician.html#feed" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                <span class="material-symbols-outlined">forum</span>
+                Community Feed
+            </a>
+            <a href="musician.html#interactions" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                <span class="material-symbols-outlined">bookmark</span>
+                Saved &amp; Likes
+            </a>
+            <a href="musician.html#bulk-import" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                <span class="material-symbols-outlined">publish</span>
+                Bulk Import
+            </a>
+            <a href="profile-musician.html" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium sidebar-item-active transition-all">
+                <span class="material-symbols-outlined">person</span>
+                Group Profile
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Bar -->
+        <header class="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-slate-950/20 backdrop-blur-md flex-shrink-0">
+            <h2 class="text-lg font-bold text-white">Group Profile</h2>
+            <div id="auth-header"></div>
+        </header>
+
+    <div class="flex-1 overflow-y-auto">
+    <div class="max-w-4xl mx-auto py-10 px-6">
     <header class="mb-12">
         <h1 class="text-4xl font-bold text-white mb-2">Complete Your Profile</h1>
         <p class="text-tertiary-container">Fill in the remaining details to unlock all features for your role.</p>
@@ -249,15 +291,13 @@
         <div class="flex gap-4 pt-8 pb-12">
             <button type="button" onclick="saveProfile()" class="flex-1 px-8 py-4 rounded-full bg-salmon text-white font-bold text-lg hover:brightness-110 hover:shadow-[0_0_30px_rgba(255,107,107,0.3)] transition-all duration-300 active:scale-95 flex items-center justify-center gap-3">
                 <span class="material-symbols-outlined">save</span>
-                Save & Update Profile
+                Save &amp; Update Profile
             </button>
-            <a href="musician.html" class="px-10 py-4 rounded-full bg-white/5 text-white font-bold border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-2">
-                <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
-                Back without saving
-            </a>
         </div>
     </form>
-</main>
+    </div>
+    </div>
+    </main>
 
 <div id="save-success" class="fixed bottom-10 left-1/2 -translate-x-1/2 glass-panel border-emerald-500/50 px-8 py-4 rounded-2xl text-emerald-400 font-bold flex items-center gap-3 translate-y-32 transition-all duration-500 opacity-0 z-[100]">
     <span class="material-symbols-outlined">check_circle</span>
