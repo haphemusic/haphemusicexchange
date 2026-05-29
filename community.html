@@ -671,9 +671,8 @@
             // Load comments
             await window.loadPostComments(postId);
 
-            // Show/hide comment form based on auth
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
+            // Show/hide comment form based on pre-loaded user
+            if (window._me) {
                 document.getElementById('post-detail-comment-form').style.display = 'block';
                 document.getElementById('post-detail-login-prompt').style.display = 'none';
             } else {
@@ -681,29 +680,16 @@
                 document.getElementById('post-detail-login-prompt').style.display = 'block';
             }
 
-            // Render delete button if user is author or admin
-            let isAdmin = false;
-            if (session) {
-                try {
-                    const { data: userProfile } = await supabase
-                        .from('profiles')
-                        .select('role')
-                        .eq('id', session.user.id)
-                        .single();
-                    if (userProfile && userProfile.role === 'admin') {
-                        isAdmin = true;
-                    }
-                } catch (pe) {
-                    console.warn("Failed to check if admin in details:", pe);
-                }
-            }
-            const isAuthor = session && session.user.id === post.author_id;
+            // Render delete button using pre-loaded user globals
+            const isAuthor = window._me && window._me.id === post.author_id;
+            const canDelete = isAuthor || window._meIsAdmin;
+            console.log('[Community] openPostDetail — me:', window._me?.id, 'author:', post.author_id, 'isAuthor:', isAuthor, 'isAdmin:', window._meIsAdmin, 'canDelete:', canDelete);
             const actionsEl = document.getElementById('post-detail-actions');
             if (actionsEl) {
-                if (isAuthor || isAdmin) {
+                if (canDelete) {
                     actionsEl.innerHTML = `
-                        <button onclick="window.deleteCommunityPost('${post.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); color:#ef4444; padding:6px 14px; border-radius:10px; cursor:pointer; font-family:Outfit,sans-serif; font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
-                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete Post
+                        <button onclick="window.deleteCommunityPost('${post.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); color:#ef4444; padding:8px 18px; border-radius:10px; cursor:pointer; font-family:Outfit,sans-serif; font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
+                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span> Eliminar post
                         </button>
                     `;
                 } else {
@@ -900,7 +886,30 @@
         }
     });
 
+    // Global current user state — loaded once
+    window._me = null;
+    window._meIsAdmin = false;
+
+    async function initCurrentUser() {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            window._me = session.user;
+            // Check admin role
+            const { data: prof } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', session.user.id)
+                .single();
+            if (prof && prof.role === 'admin') window._meIsAdmin = true;
+            console.log('[Community] User loaded:', window._me.id, 'isAdmin:', window._meIsAdmin);
+        } catch (e) {
+            console.warn('[Community] Could not load current user:', e);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
+        await initCurrentUser();
         window.loadPosts();
         document.getElementById('create-post-backdrop').addEventListener('click', e => {
             if (e.target === document.getElementById('create-post-backdrop')) window.closeCreatePostModal();
