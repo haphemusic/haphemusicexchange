@@ -653,16 +653,21 @@ window.deletePiece = async (pieceId) => {
         return;
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('works')
         .delete()
-        .eq('id', pieceId);
+        .eq('id', parseInt(pieceId, 10))
+        .select();
 
     if (error) {
         alert('Error deleting piece: ' + error.message);
     } else {
-        await loadPieces();
-        await loadStats();
+        if (!data || data.length === 0) {
+            alert("⚠️ No se eliminó la obra de la base de datos (0 filas afectadas).\n\nEsto se debe a las políticas de seguridad RLS de Supabase.\n\nPor favor, copia y ejecuta las consultas del archivo 'diseno/crear_politicas_admin.sql' en tu SQL Editor de Supabase para otorgar permisos de eliminación a los administradores.");
+        } else {
+            await loadPieces();
+            await loadStats();
+        }
     }
 };
 
@@ -730,19 +735,25 @@ window.deleteSelectedPieces = async () => {
     const checked = document.querySelectorAll('.piece-checkbox:checked');
     if (checked.length === 0) return;
 
-    const ids = [...checked].map(cb => cb.dataset.id);
+    const ids = [...checked].map(cb => parseInt(cb.dataset.id, 10));
     if (!confirm(`Are you sure you want to permanently delete ${ids.length} piece${ids.length > 1 ? 's' : ''}? This action cannot be undone.`)) return;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('works')
         .delete()
-        .in('id', ids);
+        .in('id', ids)
+        .select();
 
     if (error) {
         alert('Error deleting pieces: ' + error.message);
     } else {
-        await loadPieces();
-        await loadStats();
+        if (!data || data.length === 0) {
+            alert("⚠️ No se eliminaron las obras de la base de datos (0 filas afectadas).\n\nEsto se debe a las políticas de seguridad RLS de Supabase.\n\nPor favor, copia y ejecuta las consultas del archivo 'diseno/crear_politicas_admin.sql' en tu SQL Editor de Supabase para otorgar permisos de eliminación a los administradores.");
+        } else {
+            window.clearPieceSelection();
+            await loadPieces();
+            await loadStats();
+        }
     }
 };
 
