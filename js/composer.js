@@ -1131,6 +1131,93 @@ window.toggleExcelImportPanel = () => {
     panel.style.display = isHidden ? 'block' : 'none';
 };
 
+function parseSpreadsheet(worksheet) {
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+    if (!rows || rows.length === 0) return [];
+
+    // PRIMARY: find the row whose first cell is a known column-A header.
+    // This is the most reliable signal for our fixed template format where
+    // row 1 = category groups, row 2 = real field names, row 3 = descriptions.
+    const knownFirstColHeaders = [
+        'original title', 'titulo original', 'work title', 'titulo obra', 'title', 'titulo'
+    ];
+
+    let headerRowIdx = -1;
+    for (let r = 0; r < Math.min(rows.length, 5); r++) {
+        const row = rows[r];
+        if (!row || row.length === 0) continue;
+        const firstCell = (row[0] || '').toString().toLowerCase().trim();
+        if (knownFirstColHeaders.includes(firstCell)) {
+            headerRowIdx = r;
+            break;
+        }
+    }
+
+    // FALLBACK: count how many cells in each row match known header names
+    if (headerRowIdx === -1) {
+        const targetHeaders = [
+            'original title', 'sub-title / version', 'year of composition', 'duration',
+            'scoring category', 'detailed instrumentation', 'work title', 'composer name',
+            'performance date', 'event / festival name', 'venue', 'city', 'country'
+        ];
+        let maxMatches = 0;
+        for (let r = 0; r < Math.min(rows.length, 5); r++) {
+            const row = rows[r];
+            if (!row) continue;
+            let matches = 0;
+            for (let c = 0; c < row.length; c++) {
+                const val = (row[c] || '').toString().toLowerCase().trim();
+                if (targetHeaders.includes(val)) matches++;
+            }
+            if (matches > maxMatches) {
+                maxMatches = matches;
+                headerRowIdx = r;
+            }
+        }
+        if (headerRowIdx === -1) headerRowIdx = 0;
+    }
+
+    // Skip description row immediately after the header row (row 3 in template)
+    const descriptionIndicators = [
+        'original title of the work',
+        'indicate if it is a revision',
+        'year the work was completed',
+        'estimated duration in minutes',
+        'linked to the database',
+        'specific date when the concert',
+        'name of the festival',
+        'concert hall, auditorium',
+        'the entity that performed the work'
+    ];
+
+    let startDataIdx = headerRowIdx + 1;
+    if (startDataIdx < rows.length) {
+        const nextRow = rows[startDataIdx] || [];
+        let isDescription = false;
+        for (let c = 0; c < nextRow.length; c++) {
+            const val = (nextRow[c] || '').toString().toLowerCase();
+            if (descriptionIndicators.some(ind => val.includes(ind))) {
+                isDescription = true;
+                break;
+            }
+        }
+        if (isDescription) startDataIdx++;
+    }
+
+    const headers = rows[headerRowIdx].map(h => (h || '').toString().trim());
+    const jsonData = [];
+    for (let r = startDataIdx; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.every(cell => cell === null || cell === undefined || cell === '')) continue;
+        const obj = {};
+        headers.forEach((h, colIdx) => {
+            if (h) obj[h] = row[colIdx] !== undefined ? row[colIdx] : '';
+        });
+        jsonData.push(obj);
+    }
+    return jsonData;
+}
+
 window.handleExcelUpload = async (event) => {
     if (window.currentUserStatus === 'suspended') {
         alert("Tu cuenta está suspendida. No puedes importar obras.");
@@ -1165,8 +1252,8 @@ window.handleExcelUpload = async (event) => {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // Convert sheet to JSON array of objects (keys are headers, values are cell values)
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            // Convert sheet to JSON array of objects using robust parseSpreadsheet helper
+            const jsonData = parseSpreadsheet(worksheet);
             if (!jsonData || jsonData.length === 0) {
                 alert("The spreadsheet seems to be empty.");
                 return;
@@ -1541,7 +1628,7 @@ window.handleBulkUpload = async (event) => {
 
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const jsonData = parseSpreadsheet(worksheet);
 
             if (!jsonData || jsonData.length === 0) {
                 alert("The spreadsheet seems to be empty.");

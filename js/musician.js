@@ -417,28 +417,46 @@ function parseSpreadsheetMusician(worksheet) {
     const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
     if (!rows || rows.length === 0) return [];
 
-    const targetHeaders = [
-        'work title', 'composer name', 'performance date', 'event / festival name',
-        'venue', 'city', 'country', 'premiere status', 'ensemble / soloist name',
-        'conductor', 'program notes (used)', 'live recording link', 'photo / poster',
-        'performance note', 'title', 'composer', 'date', 'ensemble'
+    // PRIMARY: check each row's first cell against known column-A header values.
+    // The template always starts with "Work Title" in column A of the header row.
+    const knownFirstColHeaders = [
+        'work title', 'titulo obra', 'titulo de la obra', 'title', 'titulo'
     ];
 
-    // Find the row with the most matching known headers
-    let headerRowIdx = 0;
-    let maxMatches = 0;
+    let headerRowIdx = -1;
     for (let r = 0; r < Math.min(rows.length, 5); r++) {
         const row = rows[r];
-        if (!row) continue;
-        let matches = 0;
-        for (let c = 0; c < row.length; c++) {
-            const val = row[c] ? row[c].toString().toLowerCase().trim() : '';
-            if (targetHeaders.includes(val)) matches++;
-        }
-        if (matches > maxMatches) {
-            maxMatches = matches;
+        if (!row || row.length === 0) continue;
+        const firstCell = (row[0] || '').toString().toLowerCase().trim();
+        if (knownFirstColHeaders.includes(firstCell)) {
             headerRowIdx = r;
+            break;
         }
+    }
+
+    // FALLBACK: count-based matching
+    if (headerRowIdx === -1) {
+        const targetHeaders = [
+            'work title', 'composer name', 'performance date', 'event / festival name',
+            'venue', 'city', 'country', 'premiere status', 'ensemble / soloist name',
+            'conductor', 'program notes (used)', 'live recording link', 'photo / poster',
+            'performance note', 'title', 'composer', 'date', 'ensemble'
+        ];
+        let maxMatches = 0;
+        for (let r = 0; r < Math.min(rows.length, 5); r++) {
+            const row = rows[r];
+            if (!row) continue;
+            let matches = 0;
+            for (let c = 0; c < row.length; c++) {
+                const val = (row[c] || '').toString().toLowerCase().trim();
+                if (targetHeaders.includes(val)) matches++;
+            }
+            if (matches > maxMatches) {
+                maxMatches = matches;
+                headerRowIdx = r;
+            }
+        }
+        if (headerRowIdx === -1) headerRowIdx = 0;
     }
 
     // Skip the description row (row 3 in the template) if present
@@ -454,10 +472,10 @@ function parseSpreadsheetMusician(worksheet) {
 
     let startDataIdx = headerRowIdx + 1;
     if (startDataIdx < rows.length) {
-        const nextRow = rows[startDataIdx];
+        const nextRow = rows[startDataIdx] || [];
         let isDescription = false;
         for (let c = 0; c < nextRow.length; c++) {
-            const val = nextRow[c] ? nextRow[c].toString().toLowerCase() : '';
+            const val = (nextRow[c] || '').toString().toLowerCase();
             if (descriptionIndicators.some(ind => val.includes(ind))) {
                 isDescription = true;
                 break;
@@ -466,7 +484,7 @@ function parseSpreadsheetMusician(worksheet) {
         if (isDescription) startDataIdx++;
     }
 
-    const headers = rows[headerRowIdx].map(h => h ? h.toString().trim() : '');
+    const headers = rows[headerRowIdx].map(h => (h || '').toString().trim());
     const jsonData = [];
     for (let r = startDataIdx; r < rows.length; r++) {
         const row = rows[r];
