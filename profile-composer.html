@@ -126,7 +126,35 @@
         <!-- Top Bar -->
         <header class="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-slate-950/20 backdrop-blur-md flex-shrink-0">
             <h2 class="text-lg font-bold text-white">Public Profile</h2>
-            <div id="auth-header" class="flex items-center gap-4">
+            <div id="auth-header" class="flex items-center gap-6">
+                <!-- Search Button -->
+                <button onclick="window.openUserSearchModal()" class="text-slate-400 hover:text-white transition-all duration-300 active:scale-95 flex items-center" title="Search Users">
+                    <span class="material-symbols-outlined text-[20px]">search</span>
+                </button>
+                <!-- Messages Button -->
+                <button onclick="window.toggleChatPanel()" id="navbar-chat-btn" class="relative text-slate-400 hover:text-white transition-all duration-300 active:scale-95 flex items-center hidden" title="Messages">
+                    <span class="material-symbols-outlined text-[20px]">mail</span>
+                    <span id="unread-chat-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full hidden"></span>
+                </button>
+                <!-- Notifications Button with dropdown container -->
+                <div class="relative flex items-center">
+                    <button onclick="window.toggleNotificationsDropdown()" id="navbar-notif-btn" class="relative text-slate-400 hover:text-white transition-all duration-300 active:scale-95 flex items-center hidden" title="Notifications">
+                        <span class="material-symbols-outlined text-[20px]">notifications</span>
+                        <span id="unread-notif-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full hidden"></span>
+                    </button>
+                    <!-- Custom Notifications Dropdown -->
+                    <div id="notifications-dropdown" style="display: none; position: absolute; top: 35px; right: 0; width: 320px; background: rgba(13,28,45,0.95); backdrop-filter: blur(20px); border: 1px solid rgba(229,115,115,0.25); border-radius: 16px; z-index: 100000; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
+                        <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; background: rgba(1,15,31,0.4);">
+                            <span class="text-xs font-bold text-white uppercase tracking-wider font-sans">Notifications</span>
+                            <button onclick="window.markAllNotificationsRead()" class="text-[10px] text-salmon hover:underline font-bold font-sans">Mark all read</button>
+                        </div>
+                        <div id="notifications-list" style="max-height: 280px; overflow-y: auto;" class="divide-y divide-white/5">
+                            <p class="text-center text-slate-500 py-6 text-xs italic font-sans">No notifications</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="h-6 w-px bg-white/10"></div>
                 <button onclick="logout()" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-salmon/10 text-salmon hover:bg-salmon hover:text-white transition-all text-xs font-medium cursor-pointer" title="Logout">
                     <span class="material-symbols-outlined text-[18px]">logout</span>
                 </button>
@@ -357,5 +385,89 @@
     Profile updated successfully!
 </div>
 
+    <!-- ── User Search Modal ─────────────────────────────────────── -->
+    <div id="user-search-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 99998; align-items: center; justify-content: center; padding: 24px;">
+        <div style="background: #0d1c2d; border: 1px solid rgba(229,115,115,0.25); border-radius: 24px; max-width: 580px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+            <!-- Header -->
+            <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 2px;">Search Community</h3>
+                    <p style="font-size: 11px; color: #8b96ac; text-transform: uppercase; letter-spacing: 0.05em;">Find composers, performers & curators</p>
+                </div>
+                <button onclick="window.closeUserSearchModal()" style="background: rgba(255,255,255,0.06); border: none; color: #d4e4fa; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" class="hover:bg-white/10">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+            <!-- Input field -->
+            <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.04); position: relative;">
+                <span class="material-symbols-outlined absolute left-9 top-[33px] text-slate-500">search</span>
+                <input type="text" id="user-search-input" oninput="window.searchUsers(this.value)" placeholder="Search by name, username, group or ensemble..." style="width: 100%; bg-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 16px 12px 42px; color: #fff; outline: none; transition: border-color 0.2s;" class="focus:border-salmon bg-white/5 text-white">
+            </div>
+            <!-- Results container -->
+            <div id="user-search-results" style="flex: 1; overflow-y: auto; padding: 16px 24px;" class="space-y-3">
+                <p class="text-center text-slate-500 py-10 text-sm">Type something to search the community...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── User Profile Detail Modal ────────────────────────────── -->
+    <div id="user-profile-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 99999; align-items: center; justify-content: center; padding: 24px;">
+        <div style="background: #010f1f; border: 1px solid rgba(229,115,115,0.3); border-radius: 28px; max-width: 720px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+            <!-- Close Button -->
+            <button onclick="window.closeUserProfile()" style="position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.08); border: none; color: #d4e4fa; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;" class="hover:bg-white/15">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+
+            <!-- Profile scroll container -->
+            <div style="flex: 1; overflow-y: auto; padding: 36px;" id="user-profile-content">
+                <!-- Profile dynamic layout will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Slide-over Chat Panel ────────────────────────────────── -->
+    <div id="chat-panel" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 420px; background: rgba(13,28,45,0.95); backdrop-filter: blur(20px); border-left: 1px solid rgba(229,115,115,0.25); z-index: 99990; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5); transition: transform 0.3s ease-in-out;">
+        <!-- Chat Header -->
+        <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; background: rgba(1,15,31,0.4);">
+            <div>
+                <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;" id="chat-header-title">Messages</h3>
+                <span style="font-size: 10px; color: #e57373; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;" id="chat-header-subtitle">Direct Messages</span>
+            </div>
+            <div class="flex gap-2">
+                <!-- Back to active chat list button -->
+                <button onclick="window.backToConversationsList()" id="chat-back-btn" style="display: none; background: rgba(255,255,255,0.06); border: none; color: #d4e4fa; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; align-items: center; justify-content: center;" class="hover:bg-white/10">
+                    <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                </button>
+                <button onclick="window.toggleChatPanel()" style="background: rgba(255,255,255,0.06); border: none; color: #d4e4fa; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" class="hover:bg-white/10">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Active Conversations List View -->
+        <div id="conversations-list-container" style="flex: 1; overflow-y: auto; padding: 16px 20px;" class="space-y-2">
+            <div class="flex items-center justify-center py-20 text-slate-500 text-sm">
+                Loading conversations...
+            </div>
+        </div>
+
+        <!-- Direct Conversation Chat View (Initially Hidden) -->
+        <div id="active-chat-container" style="display: none; flex: 1; flex-direction: column; overflow: hidden;">
+            <!-- Message Bubbles Container -->
+            <div id="chat-messages-container" style="flex: 1; overflow-y: auto; padding: 20px 24px;" class="space-y-4">
+                <!-- Bubbles get appended here -->
+            </div>
+
+            <!-- Chat Input Form -->
+            <form id="chat-input-form" onsubmit="window.handleChatSubmit(event)" style="padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 12px; background: rgba(1,15,31,0.4); align-items: center; margin: 0;">
+                <input type="text" id="chat-message-input" placeholder="Type a message..." style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 10px 16px; color: #fff; outline: none; font-size: 13px;" class="focus:border-salmon text-white bg-white/5">
+                <button type="submit" style="background: #e57373; border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; shrink: 0;" class="hover:brightness-110 active:scale-95 transition-all">
+                    <span class="material-symbols-outlined text-[18px]">send</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/dashboard-messaging.js"></script>
 </body>
 </html>
