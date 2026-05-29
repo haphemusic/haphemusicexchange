@@ -410,6 +410,76 @@ window.toggleExcelImportPanel = () => {
     panel.style.display = isHidden ? 'block' : 'none';
 };
 
+// ── Smart spreadsheet parser for performer templates ─────────────────────────
+// Detects real header row (row 2 in the 3-row preamble template) and skips
+// the description row (row 3), so data rows map to correct column names.
+function parseSpreadsheetMusician(worksheet) {
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+    if (!rows || rows.length === 0) return [];
+
+    const targetHeaders = [
+        'work title', 'composer name', 'performance date', 'event / festival name',
+        'venue', 'city', 'country', 'premiere status', 'ensemble / soloist name',
+        'conductor', 'program notes (used)', 'live recording link', 'photo / poster',
+        'performance note', 'title', 'composer', 'date', 'ensemble'
+    ];
+
+    // Find the row with the most matching known headers
+    let headerRowIdx = 0;
+    let maxMatches = 0;
+    for (let r = 0; r < Math.min(rows.length, 5); r++) {
+        const row = rows[r];
+        if (!row) continue;
+        let matches = 0;
+        for (let c = 0; c < row.length; c++) {
+            const val = row[c] ? row[c].toString().toLowerCase().trim() : '';
+            if (targetHeaders.includes(val)) matches++;
+        }
+        if (matches > maxMatches) {
+            maxMatches = matches;
+            headerRowIdx = r;
+        }
+    }
+
+    // Skip the description row (row 3 in the template) if present
+    const descriptionIndicators = [
+        'title of the performed work',
+        'composer of the work',
+        'specific date when the concert',
+        'name of the festival',
+        'concert hall, auditorium',
+        'the entity that performed the work',
+        'linked to the database'
+    ];
+
+    let startDataIdx = headerRowIdx + 1;
+    if (startDataIdx < rows.length) {
+        const nextRow = rows[startDataIdx];
+        let isDescription = false;
+        for (let c = 0; c < nextRow.length; c++) {
+            const val = nextRow[c] ? nextRow[c].toString().toLowerCase() : '';
+            if (descriptionIndicators.some(ind => val.includes(ind))) {
+                isDescription = true;
+                break;
+            }
+        }
+        if (isDescription) startDataIdx++;
+    }
+
+    const headers = rows[headerRowIdx].map(h => h ? h.toString().trim() : '');
+    const jsonData = [];
+    for (let r = startDataIdx; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.every(cell => cell === null || cell === undefined || cell === '')) continue;
+        const obj = {};
+        headers.forEach((h, colIdx) => {
+            if (h) obj[h] = row[colIdx] !== undefined ? row[colIdx] : '';
+        });
+        jsonData.push(obj);
+    }
+    return jsonData;
+}
+
 window.processCSV = (event) => {
     if (window.currentUserStatus === 'suspended') {
         alert("Tu cuenta está suspendida. No puedes importar interpretaciones.");
@@ -446,10 +516,10 @@ window.processCSV = (event) => {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // Convert sheet to JSON array of objects
-            const rows = XLSX.utils.sheet_to_json(worksheet);
+            // Convert sheet to JSON using smart header-detection parser
+            const rows = parseSpreadsheetMusician(worksheet);
             if (!rows || rows.length === 0) {
-                statusEl.innerHTML = `<span class="material-symbols-outlined text-[16px] text-rose-400">error</span> <span>The file seems to be empty.</span>`;
+                statusEl.innerHTML = `<span class="material-symbols-outlined text-[16px] text-rose-400">error</span> <span>The file seems to be empty or has no data rows below the header.</span>`;
                 statusEl.style.color = '#E57373';
                 return;
             }
@@ -857,33 +927,14 @@ window.handleBulkUpload = async (event) => {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            if (!rows || rows.length < 2) {
-                alert("The spreadsheet seems to be empty.");
+            // Use smart parser: detects real header row, skips category/description rows
+            const objRows = parseSpreadsheetMusician(worksheet);
+            if (!objRows || objRows.length === 0) {
+                alert("The spreadsheet seems to be empty or has no data rows below the header.");
                 return;
             }
 
-            let headerRowIndex = 0;
-            let dataStartRowIndex = 1;
-            
-            const row0Str = rows[0].map(c => normString(c)).join(',');
-            
-            if (row0Str.includes('coreinformation') || row0Str.includes('performancedetails')) {
-                headerRowIndex = 1;
-                dataStartRowIndex = 2;
-                if (rows[2] && rows[2].some(c => c && c.toString().includes('linked to the database'))) {
-                    dataStartRowIndex = 3;
-                }
-            } else if (row0Str.includes('worktitle') || row0Str.includes('tituloobra') || row0Str.includes('title')) {
-                headerRowIndex = 0;
-                dataStartRowIndex = 1;
-                if (rows[1] && rows[1].some(c => c && c.toString().includes('linked to the database'))) {
-                    dataStartRowIndex = 2;
-                }
-            }
-
-            const headers = rows[headerRowIndex].map(h => h ? h.toString().trim() : '');
-            
+            // Build column mapping info for the preview UI
             const mappings = {
                 work_title: ['work title', 'titulo obra', 'obra', 'titulo', 'title'],
                 composer_name: ['composer name', 'nombre compositor', 'compositor', 'composer'],
@@ -901,39 +952,38 @@ window.handleBulkUpload = async (event) => {
                 performance_note: ['performance note', 'nota interpretacion', 'comentarios', 'feedback']
             };
 
-            const columnMapping = {};
+            const availableHeaders = Object.keys(objRows[0] || {});
+            const columnMapping = {};   // fieldKey -> actual header string
             const matchedHeadersInfo = {};
-
             for (const fieldKey in mappings) {
                 const searchKeys = mappings[fieldKey];
-                const headerIndex = headers.findIndex(h => {
+                const matched = availableHeaders.find(h => {
                     const normH = normString(h);
                     return searchKeys.some(sk => normH === sk || normH.includes(sk));
                 });
-                if (headerIndex !== -1) {
-                    columnMapping[fieldKey] = headerIndex;
-                    matchedHeadersInfo[fieldKey] = headers[headerIndex];
+                if (matched) {
+                    columnMapping[fieldKey] = matched;
+                    matchedHeadersInfo[fieldKey] = matched;
                 }
             }
 
-            const dataRows = rows.slice(dataStartRowIndex);
-            const rowsToProcess = dataRows.slice(0, 100);
+            const rowsToProcess = objRows.slice(0, 100);
 
-            parsedPerformances = rowsToProcess.map((rowArr, idx) => {
-                const rawTitle = columnMapping.work_title !== undefined ? rowArr[columnMapping.work_title] : '';
-                const rawComposer = columnMapping.composer_name !== undefined ? rowArr[columnMapping.composer_name] : '';
-                const rawDate = columnMapping.performance_date !== undefined ? rowArr[columnMapping.performance_date] : '';
-                const rawEvent = columnMapping.event_name !== undefined ? rowArr[columnMapping.event_name] : '';
-                const rawVenue = columnMapping.venue !== undefined ? rowArr[columnMapping.venue] : '';
-                const rawCity = columnMapping.city !== undefined ? rowArr[columnMapping.city] : '';
-                const rawCountry = columnMapping.country !== undefined ? rowArr[columnMapping.country] : '';
-                const rawPremiere = columnMapping.premiere_status !== undefined ? rowArr[columnMapping.premiere_status] : '';
-                const rawEnsemble = columnMapping.ensemble_name !== undefined ? rowArr[columnMapping.ensemble_name] : '';
-                const rawConductor = columnMapping.conductor !== undefined ? rowArr[columnMapping.conductor] : '';
-                const rawLink = columnMapping.recording_link !== undefined ? rowArr[columnMapping.recording_link] : '';
-                const rawPhoto = columnMapping.photo_link !== undefined ? rowArr[columnMapping.photo_link] : '';
-                const rawNotes = columnMapping.program_notes !== undefined ? rowArr[columnMapping.program_notes] : '';
-                const rawFeedback = columnMapping.performance_note !== undefined ? rowArr[columnMapping.performance_note] : '';
+            parsedPerformances = rowsToProcess.map((row, idx) => {
+                const rawTitle    = columnMapping.work_title       ? row[columnMapping.work_title]       : '';
+                const rawComposer = columnMapping.composer_name    ? row[columnMapping.composer_name]    : '';
+                const rawDate     = columnMapping.performance_date ? row[columnMapping.performance_date] : '';
+                const rawEvent    = columnMapping.event_name       ? row[columnMapping.event_name]       : '';
+                const rawVenue    = columnMapping.venue            ? row[columnMapping.venue]            : '';
+                const rawCity     = columnMapping.city             ? row[columnMapping.city]             : '';
+                const rawCountry  = columnMapping.country          ? row[columnMapping.country]          : '';
+                const rawPremiere = columnMapping.premiere_status  ? row[columnMapping.premiere_status]  : '';
+                const rawEnsemble = columnMapping.ensemble_name    ? row[columnMapping.ensemble_name]    : '';
+                const rawConductor= columnMapping.conductor        ? row[columnMapping.conductor]        : '';
+                const rawLink     = columnMapping.recording_link   ? row[columnMapping.recording_link]   : '';
+                const rawPhoto    = columnMapping.photo_link       ? row[columnMapping.photo_link]       : '';
+                const rawNotes    = columnMapping.program_notes    ? row[columnMapping.program_notes]    : '';
+                const rawFeedback = columnMapping.performance_note ? row[columnMapping.performance_note] : '';
 
                 const work_title = cleanFieldBulk(rawTitle);
                 const composer_name = cleanFieldBulk(rawComposer);
