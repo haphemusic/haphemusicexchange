@@ -582,8 +582,15 @@ function renderPieces(piecesToRender) {
         else if (difficultyVal.toLowerCase() === 'professional') diffColor = 'bg-rose-500/10 text-rose-400';
 
         return `
-            <tr class="hover:bg-white/2 transition-colors">
-                <td class="px-8 py-4">
+            <tr class="hover:bg-white/2 transition-colors piece-row" data-piece-id="${p.id}">
+                <td class="px-6 py-4">
+                    <input type="checkbox"
+                           class="piece-checkbox w-4 h-4 rounded accent-salmon cursor-pointer"
+                           data-id="${p.id}"
+                           onchange="window.onPieceCheckboxChange()"
+                           onclick="event.stopPropagation()">
+                </td>
+                <td class="px-4 py-4">
                     <div>
                         <p class="text-sm font-bold text-white">${p.title}</p>
                         ${p.subtitle ? `<p class="text-[10px] text-slate-500">${p.subtitle}</p>` : ''}
@@ -655,7 +662,87 @@ window.deletePiece = async (pieceId) => {
         alert('Error deleting piece: ' + error.message);
     } else {
         await loadPieces();
-        await loadStats(); // Reload stats as works count has changed
+        await loadStats();
+    }
+};
+
+// ── Bulk selection helpers ──
+
+window.onPieceCheckboxChange = () => {
+    const all = document.querySelectorAll('.piece-checkbox');
+    const checked = document.querySelectorAll('.piece-checkbox:checked');
+    const selectAllCb = document.getElementById('pieces-select-all');
+    if (selectAllCb) {
+        selectAllCb.checked = checked.length === all.length && all.length > 0;
+        selectAllCb.indeterminate = checked.length > 0 && checked.length < all.length;
+    }
+    // Highlight selected rows
+    all.forEach(cb => {
+        const row = cb.closest('tr');
+        if (cb.checked) {
+            row.classList.add('bg-rose-500/5');
+        } else {
+            row.classList.remove('bg-rose-500/5');
+        }
+    });
+    window.updatePieceBulkBar();
+};
+
+window.toggleSelectAllPieces = (checked) => {
+    document.querySelectorAll('.piece-checkbox').forEach(cb => {
+        cb.checked = checked;
+        const row = cb.closest('tr');
+        if (checked) {
+            row.classList.add('bg-rose-500/5');
+        } else {
+            row.classList.remove('bg-rose-500/5');
+        }
+    });
+    window.updatePieceBulkBar();
+};
+
+window.updatePieceBulkBar = () => {
+    const checked = document.querySelectorAll('.piece-checkbox:checked');
+    const bar = document.getElementById('pieces-bulk-bar');
+    const countEl = document.getElementById('pieces-selected-count');
+    if (!bar) return;
+    if (checked.length > 0) {
+        bar.classList.remove('hidden');
+        bar.classList.add('flex');
+        if (countEl) countEl.textContent = `${checked.length} selected`;
+    } else {
+        bar.classList.add('hidden');
+        bar.classList.remove('flex');
+    }
+};
+
+window.clearPieceSelection = () => {
+    document.querySelectorAll('.piece-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.closest('tr').classList.remove('bg-rose-500/5');
+    });
+    const selectAllCb = document.getElementById('pieces-select-all');
+    if (selectAllCb) { selectAllCb.checked = false; selectAllCb.indeterminate = false; }
+    window.updatePieceBulkBar();
+};
+
+window.deleteSelectedPieces = async () => {
+    const checked = document.querySelectorAll('.piece-checkbox:checked');
+    if (checked.length === 0) return;
+
+    const ids = [...checked].map(cb => cb.dataset.id);
+    if (!confirm(`Are you sure you want to permanently delete ${ids.length} piece${ids.length > 1 ? 's' : ''}? This action cannot be undone.`)) return;
+
+    const { error } = await supabase
+        .from('works')
+        .delete()
+        .in('id', ids);
+
+    if (error) {
+        alert('Error deleting pieces: ' + error.message);
+    } else {
+        await loadPieces();
+        await loadStats();
     }
 };
 

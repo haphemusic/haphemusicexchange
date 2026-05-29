@@ -207,12 +207,30 @@
                         <input type="text" id="pieces-search-input" oninput="window.filterPieces(this.value)" placeholder="Search piece, composer or uploader..." class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-salmon w-64">
                     </div>
                 </div>
+
+                <!-- Bulk action bar (hidden until something is selected) -->
+                <div id="pieces-bulk-bar" class="hidden items-center gap-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl px-6 py-3">
+                    <span id="pieces-selected-count" class="text-sm font-bold text-rose-400">0 selected</span>
+                    <div class="flex-1"></div>
+                    <button onclick="window.deleteSelectedPieces()" class="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all">
+                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                        Delete Selected
+                    </button>
+                    <button onclick="window.clearPieceSelection()" class="text-slate-400 hover:text-white text-sm font-bold px-4 py-2 rounded-xl transition-all bg-white/5">
+                        Cancel
+                    </button>
+                </div>
+
                 <div class="glass-panel rounded-3xl overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead class="bg-white/5">
                                 <tr>
-                                    <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Piece / Work</th>
+                                    <th class="px-6 py-4">
+                                        <input type="checkbox" id="pieces-select-all" onchange="window.toggleSelectAllPieces(this.checked)"
+                                               class="w-4 h-4 rounded accent-salmon cursor-pointer">
+                                    </th>
+                                    <th class="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase">Piece / Work</th>
                                     <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Composer</th>
                                     <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Uploaded By</th>
                                     <th class="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase">Year / Duration</th>

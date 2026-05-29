@@ -54,11 +54,22 @@ window.searchUsers = async (query) => {
     clearTimeout(userSearchTimeout);
     userSearchTimeout = setTimeout(async () => {
         try {
+            const lowerQ = q.toLowerCase();
+            let orFilter = `username.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,performer_name.ilike.%${q}%`;
+            
+            if (lowerQ === 'admin' || lowerQ === 'admins' || lowerQ === 'administrador' || lowerQ === 'administradores') {
+                orFilter += `,role.eq.admin`;
+            } else if (lowerQ === 'composer' || lowerQ === 'composers' || lowerQ === 'compositor' || lowerQ === 'compositores') {
+                orFilter += `,role.eq.composer`;
+            } else if (lowerQ === 'performer' || lowerQ === 'performers' || lowerQ === 'ensemble' || lowerQ === 'ensembles' || lowerQ === 'ensamble' || lowerQ === 'ensambles' || lowerQ === 'musician' || lowerQ === 'musicians' || lowerQ === 'musico' || lowerQ === 'musicos' || lowerQ === 'interprete' || lowerQ === 'interpretes') {
+                orFilter += `,role.eq.musician`;
+            }
+
             const { data: users, error } = await window.supabase
                 .from('profiles')
                 .select('id, username, first_name, last_name, performer_name, role, avatar_url, bio, nationality')
-                .or(`username.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,performer_name.ilike.%${q}%`)
-                .limit(10);
+                .or(orFilter)
+                .limit(50);
 
             if (error) {
                 console.error("Error searching users:", error);
