@@ -314,6 +314,7 @@
             <p id="post-detail-content" style="font-size:14px;color:#94a3b8;line-height:1.7;margin-bottom:16px;"></p>
             <div id="post-detail-media" style="margin-bottom:16px;"></div>
             <div id="post-detail-link" style="margin-bottom:8px;"></div>
+            <div id="post-detail-actions" style="margin-top:16px; display:flex; align-items:center; justify-content:flex-end;"></div>
         </div>
         <!-- Comments Section -->
         <div style="padding:0 24px 24px;">
@@ -680,6 +681,36 @@
                 document.getElementById('post-detail-login-prompt').style.display = 'block';
             }
 
+            // Render delete button if user is author or admin
+            let isAdmin = false;
+            if (session) {
+                try {
+                    const { data: userProfile } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', session.user.id)
+                        .single();
+                    if (userProfile && userProfile.role === 'admin') {
+                        isAdmin = true;
+                    }
+                } catch (pe) {
+                    console.warn("Failed to check if admin in details:", pe);
+                }
+            }
+            const isAuthor = session && session.user.id === post.author_id;
+            const actionsEl = document.getElementById('post-detail-actions');
+            if (actionsEl) {
+                if (isAuthor || isAdmin) {
+                    actionsEl.innerHTML = `
+                        <button onclick="window.deleteCommunityPost('${post.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); color:#ef4444; padding:6px 14px; border-radius:10px; cursor:pointer; font-family:Outfit,sans-serif; font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
+                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete Post
+                        </button>
+                    `;
+                } else {
+                    actionsEl.innerHTML = '';
+                }
+            }
+
         } catch (err) {
             console.error('Error opening post:', err);
         }
@@ -791,6 +822,57 @@
             window.loadPosts();
         } catch (err) {
             console.error('Error voting:', err);
+        }
+    };
+
+    window.deleteCommunityPost = async (postId) => {
+        if (!postId) return;
+        if (!confirm('¿Seguro que quieres eliminar este post? Esta acción no se puede deshacer.')) return;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { alert('Debes iniciar sesión para eliminar posts.'); return; }
+
+            // Check admin
+            let isAdmin = false;
+            try {
+                const { data: userProfile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .single();
+                if (userProfile && userProfile.role === 'admin') isAdmin = true;
+            } catch (e) {}
+
+            // Check author
+            const { data: postData } = await supabase
+                .from('posts')
+                .select('author_id')
+                .eq('id', postId)
+                .single();
+
+            const isAuthor = postData && postData.author_id === session.user.id;
+
+            if (!isAuthor && !isAdmin) {
+                alert('No tienes permiso para eliminar este post.');
+                return;
+            }
+
+            // Delete comments first (foreign key)
+            await supabase.from('comments').delete().eq('post_id', postId);
+            // Delete votes
+            await supabase.from('votes').delete().eq('post_id', postId);
+            // Delete post
+            const { error } = await supabase.from('posts').delete().eq('id', postId);
+            if (error) throw error;
+
+            // Close modal and reload
+            window.closePostDetailBtn();
+            window.loadPosts();
+            alert('Post eliminado correctamente.');
+        } catch (err) {
+            console.error('Error deleting post:', err);
+            alert('Error al eliminar el post: ' + (err.message || err));
         }
     };
 
