@@ -317,41 +317,32 @@ window.filterWizInstrumentList = (query) => {
 };
 
 window.addTypedCustomInstrument = async (val) => {
-    // Insert new custom instrument into database
-    const { data: newInst, error: insertError } = await supabase
-        .from('instruments')
-        .insert({ name: val, family: 'Custom' })
-        .select()
-        .single();
-
-    if (insertError) {
-        console.error('Error inserting custom instrument:', insertError);
-        alert('Error registering custom instrument: ' + insertError.message);
-        return;
+    // Don't insert into DB — just add a local pending tag
+    const tempId = `custom_${val.replace(/\s+/g, '_')}`;
+    const pendingInst = { id: tempId, name: val, family: 'Custom', _isPending: true };
+    
+    // Add to our local collections if not already there
+    if (!instrumentIdMap.has(tempId)) {
+        allInstruments.push(pendingInst);
+        instrumentIdMap.set(tempId, pendingInst);
     }
+    
+    // Select it (with hourglass emoji to indicate pending status)
+    window.addWizInstrumentTag(tempId, val + ' ⏳');
 
-    if (newInst) {
-        // Add to our local collections
-        allInstruments.push(newInst);
-        instrumentIdMap.set(newInst.id, newInst);
-        
-        // Select it
-        window.addWizInstrumentTag(newInst.id, newInst.name);
+    // Notify admins of new instrument
+    const workTitle = document.getElementById('w-title')?.value.trim() || 'Unspecified Work';
+    await notifyAdminsOfUnmatchedInstruments([val], [workTitle]);
 
-        // Notify admins of new instrument
-        const workTitle = document.getElementById('w-title')?.value.trim() || 'Unspecified Work';
-        await notifyAdminsOfUnmatchedInstruments([newInst.name], [workTitle]);
-
-        // Clear search and close dropdown
-        const searchInput = document.getElementById('wiz-instrument-search');
-        if (searchInput) searchInput.value = '';
-        
-        const m = document.getElementById('wiz-instrument-list');
-        if (m) m.style.display = 'none';
-        
-        const btn = document.getElementById('wiz-instrument-btn');
-        if (btn) btn.style.borderColor = '';
-    }
+    // Clear search and close dropdown
+    const searchInput = document.getElementById('wiz-instrument-search');
+    if (searchInput) searchInput.value = '';
+    
+    const m = document.getElementById('wiz-instrument-list');
+    if (m) m.style.display = 'none';
+    
+    const btn = document.getElementById('wiz-instrument-btn');
+    if (btn) btn.style.borderColor = '';
 };
 
 window.addWizInstrumentTag = (instId, displayName) => {
@@ -364,7 +355,7 @@ window.addWizInstrumentTag = (instId, displayName) => {
     const tagHtml = `
         <div class="tag-item bg-salmon/20 text-salmon px-3 py-1.5 rounded-full text-[11px] flex items-center gap-2" data-inst-id="${instId}">
             <span>${displayName}</span>
-            <span class="cursor-pointer font-bold text-xs hover:text-white" onclick="window.removeWizInstrumentTag(${instId})">×</span>
+            <span class="cursor-pointer font-bold text-xs hover:text-white" onclick="window.removeWizInstrumentTag('${instId}')">×</span>
         </div>
     `;
     container.insertAdjacentHTML('beforeend', tagHtml);
@@ -443,36 +434,26 @@ window.addWizOtherInstrumentTag = async () => {
         return;
     }
 
-    // Insert new custom instrument into database
-    const { data: newInst, error: insertError } = await supabase
-        .from('instruments')
-        .insert({ name: val, family: 'Custom' })
-        .select()
-        .single();
-
-    if (insertError) {
-        console.error('Error inserting custom instrument:', insertError);
-        alert('Error registering custom instrument: ' + insertError.message);
-        return;
+    // Don't insert into DB — just add a local pending tag
+    const tempId = `custom_${val.replace(/\s+/g, '_')}`;
+    const pendingInst = { id: tempId, name: val, family: 'Custom', _isPending: true };
+    
+    // Add to our local collections if not already there
+    if (!instrumentIdMap.has(tempId)) {
+        allInstruments.push(pendingInst);
+        instrumentIdMap.set(tempId, pendingInst);
     }
+    
+    // Select it (with hourglass emoji to indicate pending status)
+    window.addWizInstrumentTag(tempId, val + ' ⏳');
 
-    if (newInst) {
-        // Add to our local collections
-        allInstruments.push(newInst);
-        instrumentIdMap.set(newInst.id, newInst);
-        
-        // Select it
-        window.addWizInstrumentTag(newInst.id, newInst.name);
+    // Notify admins of new instrument
+    const workTitle = document.getElementById('w-title')?.value.trim() || 'Unspecified Work';
+    await notifyAdminsOfUnmatchedInstruments([val], [workTitle]);
 
-        // Notify admins of new instrument
-        // Get the title of the work being registered if it has one
-        const workTitle = document.getElementById('w-title')?.value.trim() || 'Unspecified Work';
-        await notifyAdminsOfUnmatchedInstruments([newInst.name], [workTitle]);
-
-        // Reset input and hide container
-        input.value = '';
-        document.getElementById('wiz-other-instrument-container').classList.add('hidden');
-    }
+    // Reset input and hide container
+    input.value = '';
+    document.getElementById('wiz-other-instrument-container').classList.add('hidden');
 };
 
 function updateWizInstrumentButtonLabel() {
@@ -1123,15 +1104,78 @@ window.editWork = (wEncoded) => {
                     const tagHtml = `
                         <div class="tag-item bg-salmon/20 text-salmon px-3 py-1.5 rounded-full text-[11px] flex items-center gap-2" data-inst-id="${instId}">
                             <span>${displayName}</span>
-                            <span class="cursor-pointer font-bold text-xs hover:text-white" onclick="window.removeWizInstrumentTag(${instId})">×</span>
+                            <span class="cursor-pointer font-bold text-xs hover:text-white" onclick="window.removeWizInstrumentTag('${instId}')">×</span>
                         </div>
                     `;
                     tagsContainer.insertAdjacentHTML('beforeend', tagHtml);
                 }
             }
         });
-        updateWizInstrumentButtonLabel();
     }
+
+    // Parse performer_combination for any other instruments (e.g. pending ones, or those newly added since then)
+    if (w.performer_combination) {
+        const parts = w.performer_combination.split(',').map(p => p.trim()).filter(Boolean);
+        parts.forEach(part => {
+            // Check if this part matches any of the loaded work_instruments names/variants
+            const alreadyLoaded = (w.work_instruments || []).some(wi => {
+                if (!wi.instrument_id) return false;
+                const nameMatch = (wi.instrument_id.name || '').toLowerCase() === part.toLowerCase();
+                const variantMatch = (wi.instrument_id.variant || '').toLowerCase() === part.toLowerCase();
+                return nameMatch || variantMatch;
+            });
+
+            if (!alreadyLoaded) {
+                // Not in work_instruments. Let's see if this instrument exists in allInstruments now (admin approved it)
+                const existing = allInstruments.find(inst => 
+                    inst.name.toLowerCase() === part.toLowerCase() || 
+                    (inst.variant && inst.variant.toLowerCase() === part.toLowerCase())
+                );
+
+                if (existing) {
+                    // It was approved/added to DB! Add it as a normal instrument
+                    if (!selectedWizInstruments.has(existing.id)) {
+                        selectedWizInstruments.add(existing.id);
+                        const displayName = existing.variant || existing.name;
+                        if (tagsContainer) {
+                            const tagHtml = `
+                                <div class="tag-item bg-salmon/20 text-salmon px-3 py-1.5 rounded-full text-[11px] flex items-center gap-2" data-inst-id="${existing.id}">
+                                    <span>${displayName}</span>
+                                    <span class="cursor-pointer font-bold text-xs hover:text-white" onclick="window.removeWizInstrumentTag('${existing.id}')">×</span>
+                                </div>
+                            `;
+                            tagsContainer.insertAdjacentHTML('beforeend', tagHtml);
+                        }
+                    }
+                } else {
+                    // Still pending. Add it as a local custom tag
+                    const tempId = `custom_${part.replace(/\s+/g, '_')}`;
+                    if (!selectedWizInstruments.has(tempId)) {
+                        selectedWizInstruments.add(tempId);
+                        
+                        // Add to allInstruments/instrumentIdMap temporarily if not already there
+                        if (!instrumentIdMap.has(tempId)) {
+                            const pendingInst = { id: tempId, name: part, family: 'Custom', _isPending: true };
+                            allInstruments.push(pendingInst);
+                            instrumentIdMap.set(tempId, pendingInst);
+                        }
+
+                        if (tagsContainer) {
+                            const tagHtml = `
+                                <div class="tag-item bg-salmon/20 text-salmon px-3 py-1.5 rounded-full text-[11px] flex items-center gap-2" data-inst-id="${tempId}">
+                                    <span>${part} ⏳</span>
+                                    <span class="cursor-pointer font-bold text-xs hover:text-white" onclick="window.removeWizInstrumentTag('${tempId}')">×</span>
+                                </div>
+                            `;
+                            tagsContainer.insertAdjacentHTML('beforeend', tagHtml);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    updateWizInstrumentButtonLabel();
 
     currentWizStep = 0;
     updateWizUI();
@@ -1242,6 +1286,12 @@ window.saveWork = async () => {
         ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean)
         : null;
 
+    // Build the performer_combination text from all selected instruments
+    const instNames = [...selectedWizInstruments].map(instId => {
+        const inst = instrumentIdMap.get(instId);
+        return inst ? (inst.variant || inst.name) : '';
+    }).filter(Boolean);
+
     const payload = {
         title,
         subtitle:              document.getElementById('w-subtitle').value.trim()      || null,
@@ -1282,6 +1332,7 @@ window.saveWork = async () => {
         composer_id:   null,         // Only set for catalog works via composers table
         submitted_by:  currentUser.id,
         status:        document.getElementById('w-visible').checked ? 'pending' : 'validated',
+        performer_combination: instNames.join(', ')                                    || null,
     };
 
     const btn = document.getElementById('wiz-submit');
@@ -1329,19 +1380,23 @@ window.saveWork = async () => {
     }
 
     if (workIdToLink && selectedWizInstruments.size > 0) {
-        const relationPayloads = [...selectedWizInstruments].map(instId => ({
-            work_id: workIdToLink,
-            instrument_id: instId,
-            quantity: 1
-        }));
+        const relationPayloads = [...selectedWizInstruments]
+            .filter(instId => !String(instId).startsWith('custom_'))
+            .map(instId => ({
+                work_id: workIdToLink,
+                instrument_id: Number(instId),
+                quantity: 1
+            }));
 
-        const { error: relError } = await supabase
-            .from('work_instruments')
-            .insert(relationPayloads);
+        if (relationPayloads.length > 0) {
+            const { error: relError } = await supabase
+                .from('work_instruments')
+                .insert(relationPayloads);
 
-        if (relError) {
-            console.error("Error saving work instruments relations:", relError);
-            alert("Work was saved, but there was an error linking the instruments: " + relError.message);
+            if (relError) {
+                console.error("Error saving work instruments relations:", relError);
+                alert("Work was saved, but there was an error linking the instruments: " + relError.message);
+            }
         }
     }
 
