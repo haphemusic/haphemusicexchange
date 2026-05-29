@@ -301,6 +301,10 @@ async function init() {
     // Show default section
     const hash = window.location.hash.substring(1) || 'overview';
     showSection(hash);
+
+    document.getElementById('top-search-input')?.addEventListener('input', (e) => {
+        filterMyWorks(e.target.value.toLowerCase().trim());
+    });
 }
 
 async function loadUserProfile() {
@@ -421,23 +425,12 @@ async function handleValidation(performanceId, newStatus) {
 }
 window.handleValidation = handleValidation;
 
-async function loadMyWorks() {
-    const container = document.getElementById('my-works-list');
-    const { data: works } = await supabase
-        .from('works')
-        .select(`
-            *,
-            composer:composer_id(name),
-            composer_profile:composer_profile_id(first_name, last_name, name),
-            work_instruments (
-                instrument_id (name, family, variant)
-            )
-        `)
-        .eq('submitted_by', currentUser.id)
-        .order('created_at', { ascending: false });
+let allMyWorks = [];
 
+function renderMyWorks(works) {
+    const container = document.getElementById('my-works-list');
     if (!works || works.length === 0) {
-        container.innerHTML = '<p class="text-[10px] text-slate-500 uppercase font-bold text-center py-4">No works registered</p>';
+        container.innerHTML = '<p class="text-[10px] text-slate-500 uppercase font-bold text-center py-4">No works match your search</p>';
         return;
     }
 
@@ -476,6 +469,45 @@ async function loadMyWorks() {
             </div>
         </div>
     `).join('');
+}
+
+async function loadMyWorks() {
+    const { data: works } = await supabase
+        .from('works')
+        .select(`
+            *,
+            composer:composer_id(name),
+            composer_profile:composer_profile_id(first_name, last_name, name),
+            work_instruments (
+                instrument_id (id, name, family, variant)
+            )
+        `)
+        .eq('submitted_by', currentUser.id)
+        .order('created_at', { ascending: false });
+
+    allMyWorks = works || [];
+
+    const searchVal = document.getElementById('top-search-input')?.value.toLowerCase().trim() || '';
+    if (searchVal) {
+        filterMyWorks(searchVal);
+    } else {
+        renderMyWorks(allMyWorks);
+    }
+}
+
+function filterMyWorks(query) {
+    if (!query) {
+        renderMyWorks(allMyWorks);
+        return;
+    }
+    const filtered = allMyWorks.filter(w => {
+        const title = (w.title || '').toLowerCase();
+        const subtitle = (w.subtitle || '').toLowerCase();
+        const year = (w.year || '').toString();
+        const status = (w.status || '').toLowerCase();
+        return title.includes(query) || subtitle.includes(query) || year.includes(query) || status.includes(query);
+    });
+    renderMyWorks(filtered);
 }
 
 // ── Work detail panel (inside composer dashboard) ─────────────────

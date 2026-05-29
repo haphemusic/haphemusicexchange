@@ -115,19 +115,6 @@
         </nav>
     </aside>
 
-    <div class="p-4 border-t border-white/5 space-y-2">
-        <a href="index.html"
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
-            <span class="material-symbols-outlined">home</span>
-            Back to Archive
-        </a>
-        <button onclick="logout()"
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-salmon/10 text-salmon hover:bg-salmon hover:text-white transition-all text-sm font-medium">
-            <span class="material-symbols-outlined">logout</span>
-            Logout
-        </button>
-    </div>
-
     <!-- Main Content -->
     <main class="flex-1 flex flex-col overflow-hidden">
         <!-- Top Bar -->
@@ -136,12 +123,21 @@
             <div class="flex items-center gap-4 flex-1 max-w-xl ml-6">
                 <div class="relative w-full">
                     <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-500">search</span>
-                    <input type="text" placeholder="Search works to interpret..."
+                    <input type="text" id="top-search-input" placeholder="Search interpretations..."
                         class="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-salmon transition-all">
                 </div>
             </div>
 
             <div class="flex items-center gap-6">
+                <a href="index.html" class="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all text-xs font-medium">
+                    <span class="material-symbols-outlined text-[18px]">home</span>
+                    Back to Archive
+                </a>
+                <button onclick="logout()" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-salmon/10 text-salmon hover:bg-salmon hover:text-white transition-all text-xs font-medium cursor-pointer">
+                    <span class="material-symbols-outlined text-[18px]">logout</span>
+                    Logout
+                </button>
+                <div class="h-6 w-px bg-white/10"></div>
                 <div class="flex flex-col items-end">
                     <p id="user-name" class="text-sm font-bold text-white">---</p>
                     <p class="text-[10px] text-salmon uppercase font-bold tracking-widest">Performer</p>
@@ -281,8 +277,8 @@
                         Supports .csv, .xlsx, .xls (Up to 100 rows)
                     </div>
                     <div class="relative z-10 mt-2" onclick="event.stopPropagation()">
-                        <a href="plantilla_performers.csv" download="plantilla_performers.csv" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-xs font-bold uppercase tracking-wider cursor-pointer">
-                            <span class="material-symbols-outlined text-[16px]">download</span> Descargar Plantilla Performer
+                        <a href="datos/interpretation%20example.xlsx" download="interpretation example.xlsx" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-xs font-bold uppercase tracking-wider cursor-pointer">
+                            <span class="material-symbols-outlined text-[16px]">download</span> Download Performer Template
                         </a>
                     </div>
                     <input type="file" id="bulk-file-input" accept=".csv, .xlsx, .xls" class="absolute inset-0 opacity-0 cursor-pointer" onchange="window.handleBulkUpload(event)">
@@ -373,8 +369,8 @@
                         <p style="font-size: 11px; color: #8b96ac; text-transform: uppercase; letter-spacing: 0.1em">Search for a validated work and fill in the performance details.</p>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <a href="plantilla_performers.csv" download="plantilla_performers.csv" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer">
-                            <span class="material-symbols-outlined text-[14px]">download</span> Descargar Plantilla Performer
+                        <a href="datos/interpretation%20example.xlsx" download="interpretation example.xlsx" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer">
+                            <span class="material-symbols-outlined text-[14px]">download</span> Download Performer Template
                         </a>
                         <button onclick="toggleExcelImportPanel()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer">
                             <span class="material-symbols-outlined text-[14px]">table_view</span> Import Excel / CSV
@@ -398,8 +394,8 @@
                         <p style="font-size: 12px; color: #d4e4fa; margin-bottom: 2px; font-weight: 500;">Drag & drop your Excel / CSV here or click to browse</p>
                         <p style="font-size: 10px; color: rgba(212, 228, 250, 0.4);">Supports .xlsx, .xls, .csv</p>
                         <div class="relative z-10 mt-2" onclick="event.stopPropagation()">
-                            <a href="plantilla_performers.csv" download="plantilla_performers.csv" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer">
-                                <span class="material-symbols-outlined text-[14px]">download</span> Descargar Plantilla Performer
+                            <a href="datos/interpretation%20example.xlsx" download="interpretation example.xlsx" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-salmon/10 border border-salmon/30 text-salmon hover:bg-salmon hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer">
+                                <span class="material-symbols-outlined text-[14px]">download</span> Download Performer Template
                             </a>
                         </div>
                         <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" onchange="processCSV(event)" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">

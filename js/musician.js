@@ -16,6 +16,10 @@ async function init() {
 
     const hash = window.location.hash.substring(1) || 'overview';
     showSection(hash);
+
+    document.getElementById('top-search-input')?.addEventListener('input', (e) => {
+        filterSubmissions(e.target.value.toLowerCase().trim());
+    });
 }
 
 async function loadUserProfile() {
@@ -53,50 +57,36 @@ async function loadStats() {
     document.getElementById('stat-rate').textContent = rate + '%';
 }
 
-async function loadSubmissions() {
-    const { data: submissions, error } = await supabase
-        .from('performances')
-        .select(`
-            *,
-            work:work_id (
-                title,
-                composer_name,
-                composer_profile_id,
-                composer:composer_id (name),
-                composer_profile:composer_profile_id(first_name, last_name, name),
-                profiles:submitted_by (first_name, last_name)
-            )
-        `)
-        .eq('performer_id', currentUser.id)
-        .order('created_at', { ascending: false });
+let allSubmissions = [];
 
+const getComposerName = (work) => {
+    if (!work) return 'Unknown';
+    if (work.composer_name) return work.composer_name;
+    if (work.composer_profile) {
+        return work.composer_profile.name || `${work.composer_profile.first_name || ''} ${work.composer_profile.last_name || ''}`.trim() || 'Unknown';
+    }
+    if (work.composer?.name) return work.composer.name;
+    if (work.profiles) {
+        return `${work.profiles.first_name || ''} ${work.profiles.last_name || ''}`.trim() || 'Unknown';
+    }
+    return 'Unknown';
+};
+
+const getVisibilityIcon = (isHidden) => {
+    return isHidden
+        ? `<span class="material-symbols-outlined text-slate-500" style="font-size:18px; line-height:1;" title="Hidden from public">visibility_off</span>`
+        : `<span class="material-symbols-outlined text-emerald-400" style="font-size:18px; line-height:1;" title="Visible to public">visibility</span>`;
+};
+
+function renderSubmissions(submissions) {
     const tableBody = document.getElementById('recent-table-body');
     const fullList = document.getElementById('full-submissions-list');
 
-    if (error || !submissions || submissions.length === 0) {
+    if (!submissions || submissions.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-500">No submissions found.</td></tr>';
-        fullList.innerHTML = '<p class="text-slate-500">You haven\'t submitted any interpretations yet.</p>';
+        fullList.innerHTML = '<p class="text-slate-500">No interpretations match your search.</p>';
         return;
     }
-
-    const getComposerName = (work) => {
-        if (!work) return 'Unknown';
-        if (work.composer_name) return work.composer_name;
-        if (work.composer_profile) {
-            return work.composer_profile.name || `${work.composer_profile.first_name || ''} ${work.composer_profile.last_name || ''}`.trim() || 'Unknown';
-        }
-        if (work.composer?.name) return work.composer.name;
-        if (work.profiles) {
-            return `${work.profiles.first_name || ''} ${work.profiles.last_name || ''}`.trim() || 'Unknown';
-        }
-        return 'Unknown';
-    };
-
-    const getVisibilityIcon = (isHidden) => {
-        return isHidden
-            ? `<span class="material-symbols-outlined text-slate-500" style="font-size:18px; line-height:1;" title="Hidden from public">visibility_off</span>`
-            : `<span class="material-symbols-outlined text-emerald-400" style="font-size:18px; line-height:1;" title="Visible to public">visibility</span>`;
-    };
 
     // Render table (Top 5)
     tableBody.innerHTML = submissions.slice(0, 5).map(s => {
@@ -161,6 +151,54 @@ async function loadSubmissions() {
         </div>
         `;
     }).join('');
+}
+
+async function loadSubmissions() {
+    const { data: submissions, error } = await supabase
+        .from('performances')
+        .select(`
+            *,
+            work:work_id (
+                title,
+                composer_name,
+                composer_profile_id,
+                composer:composer_id (name),
+                composer_profile:composer_profile_id(first_name, last_name, name),
+                profiles:submitted_by (first_name, last_name)
+            )
+        `)
+        .eq('performer_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error loading submissions:", error);
+        return;
+    }
+
+    allSubmissions = submissions || [];
+
+    const searchVal = document.getElementById('top-search-input')?.value.toLowerCase().trim() || '';
+    if (searchVal) {
+        filterSubmissions(searchVal);
+    } else {
+        renderSubmissions(allSubmissions);
+    }
+}
+
+function filterSubmissions(query) {
+    if (!query) {
+        renderSubmissions(allSubmissions);
+        return;
+    }
+    const filtered = allSubmissions.filter(s => {
+        const title = (s.work?.title || '').toLowerCase();
+        const composer = getComposerName(s.work).toLowerCase();
+        const event = (s.event_name || '').toLowerCase();
+        const city = (s.city || '').toLowerCase();
+        const venue = (s.venue || '').toLowerCase();
+        return title.includes(query) || composer.includes(query) || event.includes(query) || city.includes(query) || venue.includes(query);
+    });
+    renderSubmissions(filtered);
 }
 
 let editingPerformanceId = null;
