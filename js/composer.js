@@ -495,17 +495,37 @@ async function loadMyWorks() {
     }
 }
 
+function matchSearch(searchable, query) {
+    if (!query) return true;
+    if (!searchable) return false;
+    const normalize = str => str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const normSearchable = normalize(searchable);
+    const normQuery = normalize(query);
+    const noSpacesSearchable = normSearchable.replace(/\s+/g, '');
+    const noSpacesQuery = normQuery.replace(/\s+/g, '');
+    if (noSpacesSearchable.includes(noSpacesQuery)) return true;
+    const queryWords = normQuery.split(/\s+/).filter(Boolean);
+    if (queryWords.length > 0) {
+        return queryWords.every(word => normSearchable.includes(word));
+    }
+    return false;
+}
+
 function filterMyWorks(query) {
     if (!query) {
         renderMyWorks(allMyWorks);
         return;
     }
     const filtered = allMyWorks.filter(w => {
-        const title = (w.title || '').toLowerCase();
-        const subtitle = (w.subtitle || '').toLowerCase();
+        const title = (w.title || '');
+        const subtitle = (w.subtitle || '');
         const year = (w.year || '').toString();
-        const status = (w.status || '').toLowerCase();
-        return title.includes(query) || subtitle.includes(query) || year.includes(query) || status.includes(query);
+        const status = (w.status || '');
+        const searchable = `${title} ${subtitle} ${year} ${status}`;
+        return matchSearch(searchable, query);
     });
     renderMyWorks(filtered);
 }

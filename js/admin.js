@@ -202,17 +202,35 @@ function renderUsers(usersToRender) {
     }).join('');
 }
 
+function matchSearch(searchable, query) {
+    if (!query) return true;
+    if (!searchable) return false;
+    const normalize = str => str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const normSearchable = normalize(searchable);
+    const normQuery = normalize(query);
+    const noSpacesSearchable = normSearchable.replace(/\s+/g, '');
+    const noSpacesQuery = normQuery.replace(/\s+/g, '');
+    if (noSpacesSearchable.includes(noSpacesQuery)) return true;
+    const queryWords = normQuery.split(/\s+/).filter(Boolean);
+    if (queryWords.length > 0) {
+        return queryWords.every(word => normSearchable.includes(word));
+    }
+    return false;
+}
+
 window.filterUsers = (query) => {
-    const q = query.toLowerCase().trim();
-    if (!q) {
+    if (!query) {
         renderUsers(allUsers);
         return;
     }
     const filtered = allUsers.filter(u => {
         const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.name || 'Anonymous User';
-        const nameMatch = fullName.toLowerCase().includes(q);
-        const emailMatch = u.email && u.email.toLowerCase().includes(q);
-        return nameMatch || emailMatch;
+        const email = u.email || '';
+        const searchable = `${fullName} ${email}`;
+        return matchSearch(searchable, query);
     });
     renderUsers(filtered);
 };
@@ -554,15 +572,17 @@ function renderPieces(piecesToRender) {
 }
 
 window.filterPieces = (query) => {
-    const q = query.toLowerCase().trim();
-    if (!q) {
+    if (!query) {
         renderPieces(allPieces);
         return;
     }
     const filtered = allPieces.filter(p => {
-        const titleMatch = p.title?.toLowerCase().includes(q);
-        const subtitleMatch = p.subtitle?.toLowerCase().includes(q);
-        const composerMatch = p.composer?.name?.toLowerCase().includes(q);
+        const title = p.title || '';
+        const subtitle = p.subtitle || '';
+        const composerName = p.composer_name
+            || (p.composer_profile ? (p.composer_profile.name || `${p.composer_profile.first_name || ''} ${p.composer_profile.last_name || ''}`.trim()) : '')
+            || p.composer?.name
+            || '';
         
         let submitterName = '';
         if (p.submitter) {
@@ -571,9 +591,9 @@ window.filterPieces = (query) => {
                 || p.submitter.name
                 || '';
         }
-        const submitterMatch = submitterName.toLowerCase().includes(q);
-
-        return titleMatch || subtitleMatch || composerMatch || submitterMatch;
+        
+        const searchable = `${title} ${subtitle} ${composerName} ${submitterName}`;
+        return matchSearch(searchable, query);
     });
     renderPieces(filtered);
 };
