@@ -585,7 +585,7 @@ function renderPieces(piecesToRender) {
             <tr class="hover:bg-white/2 transition-colors piece-row" data-piece-id="${p.id}">
                 <td class="px-6 py-4">
                     <input type="checkbox"
-                           class="piece-checkbox w-4 h-4 rounded accent-salmon cursor-pointer"
+                           class="piece-checkbox w-4 h-4 rounded border border-white/30 bg-white/10 text-salmon focus:ring-0 focus:ring-offset-0 cursor-pointer"
                            data-id="${p.id}"
                            onchange="window.onPieceCheckboxChange()"
                            onclick="event.stopPropagation()">
