@@ -168,7 +168,7 @@ async function notifyAdminsOfUnmatchedInstruments(unmatchedNames, workTitles = [
 }
 
 function getSortedFamilies(instrumentData) {
-    const dbFamilies = Object.keys(instrumentData);
+    const dbFamilies = Object.keys(instrumentData).sort();
     let storedOrder = [];
     try {
         const stored = localStorage.getItem('haphe_admin_family_order');
