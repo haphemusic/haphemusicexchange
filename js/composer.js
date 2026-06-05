@@ -90,8 +90,17 @@ function findInstrumentMatch(inputStr) {
 
 async function loadInstruments() {
     try {
-        const { data, error } = await supabase.from('instruments').select('*');
-        if (error) throw error;
+        let res = await supabase.from('instruments').select('*')
+            .order('sort_order', { ascending: true, nullsFirst: false })
+            .order('name', { ascending: true });
+        
+        if (res.error && (res.error.message.includes('sort_order') || res.error.code === '42703')) {
+            res = await supabase.from('instruments').select('*')
+                .order('name', { ascending: true });
+        }
+
+        const data = res.data;
+        if (res.error) throw res.error;
         if (data) {
             allInstruments = data;
             instrumentData = {};
@@ -204,11 +213,10 @@ function renderDefaultWizInstrumentMenuItems() {
                     ${names.map(n => {
                         const variants = instrumentData[f][n];
                         if (variants.length > 0) {
-                            const sortedVariants = [...variants].sort((a, b) => (a.variant || '').localeCompare(b.variant || ''));
                             return `
                                 <div class="cascade-item">${n}
                                     <div class="cascade-submenu">
-                                        ${sortedVariants.map(vObj => {
+                                        ${variants.map(vObj => {
                                             const v = vObj.variant;
                                             const displayName = v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`;
                                             return `

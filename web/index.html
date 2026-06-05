@@ -695,7 +695,16 @@
     let workVotes = [];
 
     async function loadInstruments() {
-        const { data } = await supabase.from('instruments').select('*');
+        let res = await supabase.from('instruments').select('*')
+            .order('sort_order', { ascending: true, nullsFirst: false })
+            .order('name', { ascending: true });
+        
+        if (res.error && (res.error.message.includes('sort_order') || res.error.code === '42703')) {
+            res = await supabase.from('instruments').select('*')
+                .order('name', { ascending: true });
+        }
+
+        const data = res.data;
         if (data) {
             data.forEach(item => {
                 if (!instrumentData[item.family]) instrumentData[item.family] = {};
@@ -802,7 +811,7 @@
                             return `
                                 <div class="cascade-item">${n}
                                     <div class="cascade-submenu">
-                                        ${variants.sort().map(v => {
+                                        ${variants.map(v => {
                                             const displayName = v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`;
                                             return `
                                                 <div class="cascade-item" onclick='window.addTag(${JSON.stringify(displayName)})'>${v}</div>
