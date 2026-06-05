@@ -167,22 +167,48 @@ async function notifyAdminsOfUnmatchedInstruments(unmatchedNames, workTitles = [
     }
 }
 
+function getSortedFamilies(instrumentData) {
+    const dbFamilies = Object.keys(instrumentData);
+    let storedOrder = [];
+    try {
+        const stored = localStorage.getItem('haphe_admin_family_order');
+        if (stored) storedOrder = JSON.parse(stored);
+    } catch (e) {
+        console.error("Error loading family order", e);
+    }
+    
+    const sortedFamilies = [];
+    storedOrder.forEach(f => {
+        if (dbFamilies.includes(f)) {
+            sortedFamilies.push(f);
+        }
+    });
+    dbFamilies.forEach(f => {
+        if (!sortedFamilies.includes(f)) {
+            sortedFamilies.push(f);
+        }
+    });
+    return sortedFamilies;
+}
+
 function renderDefaultWizInstrumentMenuItems() {
     const menuItemsContainer = document.getElementById('wiz-instrument-menu-items');
     if (!menuItemsContainer) return;
 
-    let html = Object.keys(instrumentData).map(f => {
-        const names = Object.keys(instrumentData[f]);
+    const sortedFamilies = getSortedFamilies(instrumentData);
+    let html = sortedFamilies.map(f => {
+        const names = Object.keys(instrumentData[f]).sort();
         return `
             <div class="cascade-item">${f}
                 <div class="cascade-submenu">
                     ${names.map(n => {
                         const variants = instrumentData[f][n];
                         if (variants.length > 0) {
+                            const sortedVariants = [...variants].sort((a, b) => (a.variant || '').localeCompare(b.variant || ''));
                             return `
                                 <div class="cascade-item">${n}
                                     <div class="cascade-submenu">
-                                        ${variants.map(vObj => {
+                                        ${sortedVariants.map(vObj => {
                                             const v = vObj.variant;
                                             const displayName = v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`;
                                             return `

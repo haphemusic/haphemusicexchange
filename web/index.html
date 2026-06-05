@@ -766,18 +766,43 @@
         filterWorks();
     }
 
+    function getSortedFamilies(instrumentData) {
+        const dbFamilies = Object.keys(instrumentData);
+        let storedOrder = [];
+        try {
+            const stored = localStorage.getItem('haphe_admin_family_order');
+            if (stored) storedOrder = JSON.parse(stored);
+        } catch (e) {
+            console.error("Error loading family order", e);
+        }
+        
+        const sortedFamilies = [];
+        storedOrder.forEach(f => {
+            if (dbFamilies.includes(f)) {
+                sortedFamilies.push(f);
+            }
+        });
+        dbFamilies.forEach(f => {
+            if (!sortedFamilies.includes(f)) {
+                sortedFamilies.push(f);
+            }
+        });
+        return sortedFamilies;
+    }
+
     function renderMenu() {
         const list = document.getElementById('main-list');
-        list.innerHTML = Object.keys(instrumentData).map(f => `
+        const sortedFamilies = getSortedFamilies(instrumentData);
+        list.innerHTML = sortedFamilies.map(f => `
             <div class="cascade-item">${f}
                 <div class="cascade-submenu">
-                    ${Object.keys(instrumentData[f]).map(n => {
+                    ${Object.keys(instrumentData[f]).sort().map(n => {
                         const variants = instrumentData[f][n];
                         if (variants.length) {
                             return `
                                 <div class="cascade-item">${n}
                                     <div class="cascade-submenu">
-                                        ${variants.map(v => {
+                                        ${variants.sort().map(v => {
                                             const displayName = v.toLowerCase().includes(n.toLowerCase()) ? v : `${n} (${v})`;
                                             return `
                                                 <div class="cascade-item" onclick='window.addTag(${JSON.stringify(displayName)})'>${v}</div>

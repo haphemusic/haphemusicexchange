@@ -480,16 +480,33 @@ window.updateCategorySelect = () => {
 };
 
 window.saveInstrument = async () => {
-    const name = document.getElementById('new-inst-name').value.trim();
+    const familySelect = document.getElementById('new-inst-family-select');
+    const familyInput = document.getElementById('new-inst-family-input');
+    const categorySelect = document.getElementById('new-inst-category-select');
+    const categoryInput = document.getElementById('new-inst-category-input');
+    const nameInput = document.getElementById('new-inst-name');
 
-    if (!name) {
+    const family = familySelect.value === 'NEW' ? familyInput.value.trim() : familySelect.value;
+    const category = categorySelect.value === 'NEW' ? categoryInput.value.trim() : categorySelect.value;
+    const variantName = nameInput.value.trim();
+
+    if (!family) {
+        alert('Please select or enter a family.');
+        return;
+    }
+    if (!category) {
+        alert('Please select or enter a category.');
+        return;
+    }
+    if (!variantName) {
         alert('Please enter the instrument name.');
         return;
     }
 
     const { error } = await supabase.from('instruments').insert({
-        name,
-        family: 'Custom'
+        family: family,
+        name: category,
+        variant: variantName
     });
 
     if (error) {
@@ -498,7 +515,9 @@ window.saveInstrument = async () => {
     }
 
     closeInstrumentModal();
-    document.getElementById('new-inst-name').value = '';
+    nameInput.value = '';
+    familyInput.value = '';
+    categoryInput.value = '';
     await loadInstruments();
     await loadStats();
 };
